@@ -21,7 +21,7 @@ static
 int __init dmabuf_module_init(void) {
     int error = 0;
 
-    dmabuf_platform_device = dmabuf_platform_device_create(DEVICE_NAME);
+    dmabuf_platform_device = dmabuf_platform_device_register(THIS_MODULE->name);
     if(IS_ERR_OR_NULL(dmabuf_platform_device)) {
         error = PTR_ERR(dmabuf_platform_device);
         dmabuf_platform_device = NULL;
@@ -33,7 +33,7 @@ int __init dmabuf_module_init(void) {
 
 static
 void __exit dmabuf_module_exit(void) {
-    dmabuf_platform_device_delete(dmabuf_platform_device);
+    platform_device_unregister(dmabuf_platform_device);
 }
 
 module_init(dmabuf_module_init);

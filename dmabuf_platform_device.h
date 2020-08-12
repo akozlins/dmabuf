@@ -2,7 +2,7 @@
 #include <linux/platform_device.h>
 
 static
-struct platform_device* dmabuf_platform_device_create(const char* name) {
+struct platform_device* dmabuf_platform_device_register(const char* name) {
     int error = 0;
     struct platform_device* pdev = NULL;
 
@@ -20,17 +20,10 @@ struct platform_device* dmabuf_platform_device_create(const char* name) {
         goto err_pdev_put;
     }
 
-    return 0;
+    return pdev;
 
 err_pdev_put:
     platform_device_put(pdev);
 err_out:
     return ERR_PTR(error);
-}
-
-static
-int dmabuf_platform_device_delete(struct platform_device* pdev) {
-    platform_device_del(pdev);
-    platform_device_put(pdev);
-    return 0;
 }
