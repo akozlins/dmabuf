@@ -47,6 +47,8 @@ int dmabuf_alloc(struct platform_device *pdev) {
         }
     }
 
+    return 0;
+
 err_free:
     dmabuf_free(pdev);
     return error;
@@ -71,7 +73,54 @@ int dmabuf_chrdev_open(struct inode *inode, struct file *file) {
 
 static
 int dmabuf_chrdev_mmap(struct file *filp, struct vm_area_struct *vma) {
-    return -ENOMEM;
+    int error = 0;
+    size_t size = 0;
+    size_t offset = 0;
+
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    pr_info("  vm_start = %lu\n", vma->vm_start);
+    pr_info("  vm_end = %lu\n", vma->vm_end);
+    pr_info("  vm_pgoff = %lu\n", vma->vm_pgoff);
+
+    if(dmabuf == NULL) {
+        return -ENOMEM;
+    }
+
+    for(int i = 0; i < dmabuf_n; i++) size += dmabuf[i].size;
+    pr_info("  size = %lu\n", size);
+    if(vma->vm_end - vma->vm_start != size) {
+        return -EINVAL;
+    }
+    if(vma->vm_pgoff != 0) {
+        return -EINVAL;
+    }
+
+    // TODO: use set_memory_uc
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+    for(int i = 0; i < dmabuf_n; i++) {
+        if(dmabuf[i].cpu_addr == NULL) {
+            return -ENOMEM;
+        }
+
+        pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
+        error = remap_pfn_range(vma,
+            vma->vm_start + offset,
+            virt_to_phys(dmabuf[i].cpu_addr) >> PAGE_SHIFT,
+            dmabuf[i].size, vma->vm_page_prot
+        );
+        if(error) {
+            pr_err("[%s/%s] remap_pfn_range: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+            goto err_unmap;
+        }
+        offset += dmabuf[i].size;
+    }
+
+    return 0;
+
+err_unmap:
+    // TODO: unmap
+    return error;
 }
 
 static
