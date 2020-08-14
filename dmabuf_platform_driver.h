@@ -8,7 +8,7 @@ struct dmabuf {
     dma_addr_t dma_addr;
 };
 static struct dmabuf* dmabuf = NULL;
-static int dmabuf_n = 16;
+static int dmabuf_n = 64;
 
 static
 void dmabuf_free(struct platform_device* pdev) {
@@ -147,12 +147,14 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
         return -EINVAL;
     }
 
-    // TODO: use set_memory_uc
+    vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
+    down_write(&vma->vm_mm->mmap_sem);
     for(int i = 0; i < dmabuf_n; i++) {
         if(dmabuf[i].cpu_addr == NULL) {
-            return -ENOMEM;
+            error = -ENOMEM;
+            break;
         }
 
         pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
@@ -163,15 +165,12 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
         );
         if(error) {
             pr_err("[%s/%s] remap_pfn_range: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
-            goto err_unmap;
+            break;
         }
         offset += dmabuf[i].size;
     }
+    up_write(&vma->vm_mm->mmap_sem);
 
-    return 0;
-
-err_unmap:
-    // TODO: unmap
     return error;
 }
 

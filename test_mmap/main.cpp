@@ -11,10 +11,13 @@
 #include <stdlib.h>
 
 int main() {
-    size_t size = 16 * 1024 * 4096;
-
     int fd = open("/dev/dmabuf2", O_RDWR);
-    printf("fd = %d, errno = %d\n", fd, errno);
+    if(fd == -1) {
+        printf("F [] open: errno = %d\n", fd, errno);
+        return EXIT_FAILURE;
+    }
+
+    size_t size = 64 * 1024 * 4096;
 
     uint32_t* wbuffer = (uint32_t*)malloc(size);
     for(int i = 0; i < size/4; i++) wbuffer[i] = i;
@@ -22,14 +25,14 @@ int main() {
     int wn = write(fd, wbuffer, size);
     printf("wn = %d\n", wn);
 
-    void* mmap_addr = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
+    uint32_t* mmap_addr = (uint32_t*)mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
     if(mmap_addr == MAP_FAILED) {
-        printf("E []\n");
-        return 1;
+        printf("F [] mmap: errno = %d\n", errno);
+        return EXIT_FAILURE;
     }
     printf("mmap_addr = %p, errno = %d\n", mmap_addr, errno);
     for(int i = 0; i < size/4; i++) {
-        if(((uint32_t*)mmap_addr)[i] == wbuffer[i]) continue;
+        if(mmap_addr[i] == wbuffer[i]) continue;
         printf("E [] mmap_addr[%d] != wbuffer[%d]\n", i, i);
     }
     munmap(mmap_addr, size);
