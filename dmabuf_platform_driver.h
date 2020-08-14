@@ -157,7 +157,6 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
-    down_write(&vma->vm_mm->mmap_sem);
     for(int i = 0; i < dmabuf_n; i++) {
         if(dmabuf[i].cpu_addr == NULL) {
             error = -ENOMEM;
@@ -176,7 +175,6 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
         }
         offset += dmabuf[i].size;
     }
-    up_write(&vma->vm_mm->mmap_sem);
 
     return error;
 }
