@@ -6,6 +6,8 @@ struct platform_device* dmabuf_platform_device_register(const char* name) {
     int error = 0;
     struct platform_device* pdev = NULL;
 
+    // TODO: use platform_device_register_simple
+
     pdev = platform_device_alloc(name, -1);
     if(IS_ERR_OR_NULL(pdev)) {
         error = PTR_ERR(pdev);
