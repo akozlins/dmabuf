@@ -50,7 +50,7 @@ int dmabuf_alloc(struct platform_device* pdev) {
             pr_err("[%s/%s] dma_alloc_coherent: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
             goto err_free;
         }
-        pr_info("  cpu_addr = %p\n", dmabuf[i].cpu_addr);
+        pr_info("  cpu_addr = %px\n", dmabuf[i].cpu_addr);
     }
 
     return 0;
@@ -67,12 +67,37 @@ static struct chrdev_struct* dmabuf_chrdev;
 
 static
 ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* offset) {
-    return 0;
+    ssize_t n = 0;
+
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+    for(int i = 0; i < dmabuf_n; i++, *offset -= dmabuf[i].size) {
+        if(*offset > dmabuf[i].size) continue;
+
+        size_t k = dmabuf[i].size - *offset;
+        if(k > size) k = size;
+
+        copy_to_user(user_buffer, dmabuf[i].cpu_addr, k);
+        n += k;
+        user_buffer += k;
+        size -= k;
+        *offset += k;
+
+        if(size == 0) break;
+    }
+
+    return n;
 }
 
 static
 ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* offset) {
-    return 0;
+    ssize_t n = 0;
+
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+
+
+    return n;
 }
 
 static
@@ -82,16 +107,16 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
     size_t offset = 0;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-    pr_info("  vm_start = %lu\n", vma->vm_start);
-    pr_info("  vm_end = %lu\n", vma->vm_end);
-    pr_info("  vm_pgoff = %lu\n", vma->vm_pgoff);
+    pr_info("  vm_start = %lx\n", vma->vm_start);
+    pr_info("  vm_end = %lx\n", vma->vm_end);
+    pr_info("  vm_pgoff = %lx\n", vma->vm_pgoff);
 
     if(dmabuf == NULL) {
         return -ENOMEM;
     }
 
     for(int i = 0; i < dmabuf_n; i++) size += dmabuf[i].size;
-    pr_info("  size = %lu\n", size);
+    pr_info("  size = %lx\n", size);
     if(vma->vm_end - vma->vm_start != size) {
         return -EINVAL;
     }
