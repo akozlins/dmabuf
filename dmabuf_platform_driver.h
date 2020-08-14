@@ -12,20 +12,26 @@ static struct dmabuf* dmabuf = NULL;
 static int dmabuf_n = 16;
 
 static
-void dmabuf_free(struct platform_device *pdev) {
+void dmabuf_free(struct platform_device* pdev) {
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
     if(dmabuf == NULL) return;
+
     for(int i = 0; i < dmabuf_n; i++) {
         if(dmabuf[i].cpu_addr == NULL) continue;
         pr_info("[%s/%s] dma_free_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         dma_free_coherent(&pdev->dev, dmabuf[i].size, dmabuf[i].cpu_addr, dmabuf[i].dma_addr);
     }
+
     kfree(dmabuf);
     dmabuf = NULL;
 }
 
 static
-int dmabuf_alloc(struct platform_device *pdev) {
+int dmabuf_alloc(struct platform_device* pdev) {
     int error = 0;
+
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     dmabuf = kzalloc(dmabuf_n * sizeof(struct dmabuf), 0);
     if(IS_ERR_OR_NULL(dmabuf)) {
@@ -45,6 +51,7 @@ int dmabuf_alloc(struct platform_device *pdev) {
             pr_err("[%s/%s] dma_alloc_coherent: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
             goto err_free;
         }
+        pr_info("  cpu_addr = %p\n", dmabuf[i].cpu_addr);
     }
 
     return 0;
@@ -65,14 +72,17 @@ struct dmabuf_chrdev {
 static struct dmabuf_chrdev dmabuf_chrdev;
 
 static
-int dmabuf_chrdev_open(struct inode *inode, struct file *file) {
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-
+ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* offset) {
     return 0;
 }
 
 static
-int dmabuf_chrdev_mmap(struct file *filp, struct vm_area_struct *vma) {
+ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* offset) {
+    return 0;
+}
+
+static
+int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
     int error = 0;
     size_t size = 0;
     size_t offset = 0;
@@ -124,10 +134,31 @@ err_unmap:
 }
 
 static
+int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+//    MOD_INC_USE_COUNT;
+
+    return 0;
+}
+
+static
+int dmabuf_chrdev_release(struct inode* inode, struct file* file) {
+    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+//    MOD_DEC_USE_COUNT;
+
+    return 0;
+}
+
+static
 struct file_operations dmabuf_chrdev_fops = {
     .owner = THIS_MODULE,
-    .open = dmabuf_chrdev_open,
+    .read = dmabuf_chrdev_read,
+    .write = dmabuf_chrdev_write,
     .mmap = dmabuf_chrdev_mmap,
+    .open = dmabuf_chrdev_open,
+    .release = dmabuf_chrdev_release,
 };
 
 static
@@ -200,7 +231,7 @@ err_free:
 
 
 static
-int dmabuf_platform_driver_probe(struct platform_device *pdev) {
+int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     int error = 0;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
@@ -228,7 +259,7 @@ err_out:
 }
 
 static
-int dmabuf_platform_driver_remove(struct platform_device *pdev) {
+int dmabuf_platform_driver_remove(struct platform_device* pdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     dmabuf_chrdev_free();

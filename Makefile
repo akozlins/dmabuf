@@ -13,8 +13,7 @@ all :
 clean :
 	make -C $(KERNEL) M=$(PWD) clean
 
-insmod : all
-	sudo rmmod $(MODULE_NAME) || true
+insmod : all rmmod
 	sudo insmod ./$(MODULE_NAME).ko
 
 rmmod :
