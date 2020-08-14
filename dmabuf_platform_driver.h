@@ -66,37 +66,58 @@ err_free:
 static struct chrdev_struct* dmabuf_chrdev;
 
 static
-ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* offset) {
+ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
+    loff_t offset = *loff;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    for(int i = 0; i < dmabuf_n; i++, *offset -= dmabuf[i].size) {
-        if(*offset > dmabuf[i].size) continue;
+    for(int i = 0; i < dmabuf_n; i++, offset -= dmabuf[i].size) {
+        size_t k;
 
-        size_t k = dmabuf[i].size - *offset;
+        if(offset > dmabuf[i].size) continue;
+
+        k = dmabuf[i].size - offset;
         if(k > size) k = size;
 
         copy_to_user(user_buffer, dmabuf[i].cpu_addr, k);
         n += k;
         user_buffer += k;
         size -= k;
-        *offset += k;
+        offset += k;
 
         if(size == 0) break;
     }
 
+    *loff += n;
     return n;
 }
 
 static
-ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* offset) {
+ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
+    loff_t offset = *loff;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
+    for(int i = 0; i < dmabuf_n; i++, offset -= dmabuf[i].size) {
+        size_t k;
 
+        if(offset > dmabuf[i].size) continue;
 
+        k = dmabuf[i].size - offset;
+        if(k > size) k = size;
+
+        copy_from_user(dmabuf[i].cpu_addr, user_buffer, k);
+        n += k;
+        user_buffer += k;
+        size -= k;
+        offset += k;
+
+        if(size == 0) break;
+    }
+
+    *loff += n;
     return n;
 }
 
