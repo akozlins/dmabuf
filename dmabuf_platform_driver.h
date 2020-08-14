@@ -66,6 +66,13 @@ err_free:
 static struct chrdev_struct* dmabuf_chrdev;
 
 static
+loff_t dmabuf_chrdev_llseek(struct file* file, loff_t loff, int whence) {
+    if(whence != SEEK_SET) return -EINVAL;
+    file->f_pos = loff;
+    return loff;
+}
+
+static
 ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
     loff_t offset = *loff;
@@ -191,6 +198,7 @@ int dmabuf_chrdev_release(struct inode* inode, struct file* file) {
 static
 struct file_operations dmabuf_chrdev_fops = {
     .owner = THIS_MODULE,
+    .llseek = dmabuf_chrdev_llseek,
     .read = dmabuf_chrdev_read,
     .write = dmabuf_chrdev_write,
     .mmap = dmabuf_chrdev_mmap,

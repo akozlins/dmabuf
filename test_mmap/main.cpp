@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 int main() {
-    int fd = open("/dev/dmabuf2", O_RDWR);
+    int fd = open("/dev/dmabuf", O_RDWR);
     if(fd == -1) {
         printf("F [] open: errno = %d\n", fd, errno);
         return EXIT_FAILURE;
@@ -21,7 +21,7 @@ int main() {
 
     uint32_t* wbuffer = (uint32_t*)malloc(size);
     for(int i = 0; i < size/4; i++) wbuffer[i] = i;
-//    lseek(fd, 0, SEEK_SET);
+    lseek(fd, 0, SEEK_SET);
     int wn = write(fd, wbuffer, size);
     printf("wn = %d\n", wn);
 
@@ -39,7 +39,7 @@ int main() {
 
     uint32_t* rbuffer = (uint32_t*)malloc(size);
     for(int i = 0; i < size/4; i++) rbuffer[i] = 0;
-//    lseek(fd, 0, SEEK_SET);
+    lseek(fd, 0, SEEK_SET);
     int rn = read(fd, rbuffer, size);
     printf("rn = %d\n", rn);
     for(int i = 0; i < size/4; i++) {
