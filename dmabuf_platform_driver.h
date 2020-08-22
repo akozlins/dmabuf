@@ -1,8 +1,10 @@
 
+#include <linux/dma-direct.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 
 struct dmabuf {
+    struct device* dev;
     size_t size;
     void* cpu_addr;
     dma_addr_t dma_addr;
@@ -41,6 +43,7 @@ int dmabuf_alloc(struct platform_device* pdev) {
     }
 
     for(int i = 0; i < dmabuf_n; i++) {
+        dmabuf[i].dev = &pdev->dev;
         dmabuf[i].size = 1024 * PAGE_SIZE;
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         dmabuf[i].cpu_addr = dma_alloc_coherent(&pdev->dev, dmabuf[i].size, &dmabuf[i].dma_addr, 0);
@@ -131,7 +134,7 @@ ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, s
 }
 
 static
-int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
+int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
     int error = 0;
     size_t size = 0;
     size_t offset = 0;
@@ -146,16 +149,15 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
     }
 
     for(int i = 0; i < dmabuf_n; i++) size += dmabuf[i].size;
-    pr_info("  size = %lx\n", size);
-    if(vma->vm_end - vma->vm_start != size) {
-        return -EINVAL;
+    if(vma_pages(vma) != PAGE_ALIGN(size) >> PAGE_SHIFT) {
+        return -ENXIO;
     }
     if(vma->vm_pgoff != 0) {
-        return -EINVAL;
+        return -ENXIO;
     }
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
-    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
     for(int i = 0; i < dmabuf_n; i++) {
         if(dmabuf[i].cpu_addr == NULL) {
@@ -166,7 +168,7 @@ int dmabuf_chrdev_mmap(struct file* filp, struct vm_area_struct* vma) {
         pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         error = remap_pfn_range(vma,
             vma->vm_start + offset,
-            virt_to_phys(dmabuf[i].cpu_addr) >> PAGE_SHIFT,
+            PHYS_PFN(dma_to_phys(dmabuf[i].dev, dmabuf[i].dma_addr)), // see `dma_direct_mmap`
             dmabuf[i].size, vma->vm_page_prot
         );
         if(error) {
