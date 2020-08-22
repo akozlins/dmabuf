@@ -21,7 +21,7 @@ void dmabuf_free(struct platform_device* pdev) {
     for(int i = 0; i < dmabuf_n; i++) {
         if(dmabuf[i].cpu_addr == NULL) continue;
         pr_info("[%s/%s] dma_free_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dma_free_coherent(&pdev->dev, dmabuf[i].size, dmabuf[i].cpu_addr, dmabuf[i].dma_addr);
+        dma_free_coherent(dmabuf[i].dev, dmabuf[i].size, dmabuf[i].cpu_addr, dmabuf[i].dma_addr);
     }
 
     kfree(dmabuf);
@@ -34,7 +34,7 @@ int dmabuf_alloc(struct platform_device* pdev) {
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    dmabuf = kzalloc(dmabuf_n * sizeof(struct dmabuf), 0);
+    dmabuf = kzalloc(dmabuf_n * sizeof(struct dmabuf), GFP_ATOMIC);
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         dmabuf = NULL;
@@ -46,7 +46,7 @@ int dmabuf_alloc(struct platform_device* pdev) {
         dmabuf[i].dev = &pdev->dev;
         dmabuf[i].size = 1024 * PAGE_SIZE;
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dmabuf[i].cpu_addr = dma_alloc_coherent(&pdev->dev, dmabuf[i].size, &dmabuf[i].dma_addr, 0);
+        dmabuf[i].cpu_addr = dma_alloc_coherent(&pdev->dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(dmabuf[i].cpu_addr)) {
             error = PTR_ERR(dmabuf[i].cpu_addr);
             dmabuf[i].cpu_addr = NULL;
