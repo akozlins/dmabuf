@@ -30,7 +30,7 @@ int main() {
     CUDA_ASSERT(cudaSetDevice(0));
     CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost))
 
-    int fd = open("/dev/dmabuf2", O_RDWR);
+    int fd = open("/dev/dmabuf", O_RDWR);
     if(fd == -1) {
         printf("F [] open: errno = %d\n", errno);
         return EXIT_FAILURE;

@@ -1,20 +1,20 @@
 
 MODULE_NAME := dmabuf
 
-obj-m += $(MODULE_NAME).o
-$(MODULE_NAME)-objs := module.o
+KDIR = /lib/modules/`uname -r`/build
 
-ccflags-y := -std=gnu11 -Wall -g
-KERNEL = /lib/modules/`uname -r`/build
+all : .cache/Kbuild
+	$(MAKE) -C $(KDIR) modules M=$(PWD)/.cache src=$(PWD) -E "MODULE_NAME := $(MODULE_NAME)"
 
-all :
-	make -C $(KERNEL) M=$(PWD) modules
+clean : .cache/Kbuild
+	$(MAKE) -C $(KDIR) clean M=$(PWD)/.cache src=$(PWD) -E "MODULE_NAME := $(MODULE_NAME)"
 
-clean :
-	make -C $(KERNEL) M=$(PWD) clean
-
-insmod : all rmmod
-	sudo insmod ./$(MODULE_NAME).ko
+insmod : | all rmmod
+	sudo insmod .cache/$(MODULE_NAME).ko
 
 rmmod :
 	sudo rmmod $(MODULE_NAME) || true
+
+.cache/Kbuild : Kbuild
+	mkdir -p .cache
+	cp Kbuild .cache/

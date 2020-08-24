@@ -1,7 +1,4 @@
 #
 
-*.cmd
-*.ko
-*.mod
-*.mod.c
-*.o
+/.cache/
+/build/
