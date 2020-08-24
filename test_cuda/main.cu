@@ -31,7 +31,7 @@ int main() {
     CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost))
 
     int fd = open("/dev/dmabuf", O_RDWR);
-    if(fd == -1) {
+    if(fd < 0) {
         printf("F [] open: errno = %d\n", errno);
         return EXIT_FAILURE;
     }
@@ -56,7 +56,7 @@ int main() {
 //        printf("F [] mlock: error = %d\n", errno);
 //        return EXIT_FAILURE;
 //    }
-//    CUDA_ASSERT(cudaHostRegister(wvalues, size, cudaHostRegisterPortable));
+//    CUDA_ASSERT(cudaHostRegister(wvalues, size, cudaHostRegisterDefault));
 
     // allocate device memory
     uint32_t* values_d;

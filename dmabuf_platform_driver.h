@@ -91,7 +91,9 @@ ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t s
         if(k > size) k = size;
 
         pr_info("[%s/%s] copy_to_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
-        copy_to_user(user_buffer, dmabuf[i].cpu_addr + offset, k);
+        if(copy_to_user(user_buffer, dmabuf[i].cpu_addr + offset, k)) {
+            return -EFAULT;
+        }
         n += k;
         user_buffer += k;
         size -= k;
@@ -120,7 +122,9 @@ ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, s
         if(k > size) k = size;
 
         pr_info("[%s/%s] copy_from_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
-        copy_from_user(dmabuf[i].cpu_addr + offset, user_buffer, k);
+        if(copy_from_user(dmabuf[i].cpu_addr + offset, user_buffer, k)) {
+            return -EFAULT;
+        }
         n += k;
         user_buffer += k;
         size -= k;
@@ -157,6 +161,7 @@ int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
     }
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
+    // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
     for(int i = 0; i < dmabuf_n; i++) {

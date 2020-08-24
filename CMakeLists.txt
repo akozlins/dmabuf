@@ -33,3 +33,10 @@ add_custom_target(dmabuf
     ALL
     DEPENDS ${MODULE_NAME}.ko
 )
+
+
+
+add_definitions(-Wall)
+
+add_subdirectory(test_cuda)
+add_subdirectory(test_mmap)

@@ -11,17 +11,20 @@
 #include <stdlib.h>
 
 int main() {
-    int fd = open("/dev/dmabuf", O_RDWR);
-    if(fd == -1) {
-        printf("F [] open: errno = %d\n", fd, errno);
+    int fd = open("/dev/dmabuf", O_RDWR | O_CLOEXEC);
+    if(fd < 0) {
+        printf("F [] open: errno = %d\n", errno);
         return EXIT_FAILURE;
     }
 
     size_t size = 64 * 1024 * 4096;
 
     uint32_t* wbuffer = (uint32_t*)malloc(size);
-    for(int i = 0; i < size/4; i++) wbuffer[i] = i;
-    lseek(fd, 0, SEEK_SET);
+    for(size_t i = 0; i < size/4; i++) wbuffer[i] = i;
+    if(lseek(fd, 0, SEEK_SET) == -1) {
+        printf("F [] lseek = -1\n");
+        return EXIT_FAILURE;
+    }
     int wn = write(fd, wbuffer, size);
     printf("wn = %d\n", wn);
 
@@ -31,20 +34,23 @@ int main() {
         return EXIT_FAILURE;
     }
     printf("mmap_addr = %p, errno = %d\n", mmap_addr, errno);
-    for(int i = 0; i < size/4; i++) {
+    for(size_t i = 0; i < size/4; i++) {
         if(mmap_addr[i] == wbuffer[i]) continue;
-        printf("E [] mmap_addr[%d] != wbuffer[%d]\n", i, i);
+        printf("E [] mmap_addr[%ld] != wbuffer[%ld]\n", i, i);
     }
     munmap(mmap_addr, size);
 
     uint32_t* rbuffer = (uint32_t*)malloc(size);
-    for(int i = 0; i < size/4; i++) rbuffer[i] = 0;
-    lseek(fd, 0, SEEK_SET);
+    for(size_t i = 0; i < size/4; i++) rbuffer[i] = 0;
+    if(lseek(fd, 0, SEEK_SET) == -1) {
+        printf("F [] lseek = -1\n");
+        return EXIT_FAILURE;
+    }
     int rn = read(fd, rbuffer, size);
     printf("rn = %d\n", rn);
-    for(int i = 0; i < size/4; i++) {
+    for(size_t i = 0; i < size/4; i++) {
         if(rbuffer[i] == wbuffer[i]) continue;
-        printf("E [] rbuffer[%d] != wbuffer[%d]\n", i, i);
+        printf("E [] rbuffer[%ld] != wbuffer[%ld]\n", i, i);
     }
 
     close(fd);
