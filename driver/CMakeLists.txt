@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.8)
-
 project(driver LANGUAGES C)
+
+set(MODULE_NAME dmabuf)
 
 execute_process(OUTPUT_VARIABLE KERNEL_RELEASE
     COMMAND uname --kernel-release
@@ -14,10 +14,8 @@ endif()
 set(KDIR "/lib/modules/${KERNEL_RELEASE}/build")
 message("I [] KDIR = '${KDIR}'")
 
-set(MODULE_NAME dmabuf)
-
 file(GLOB MODULE_SOURCES
-    module.c
+    ${MODULE_NAME}.c
     *.h
 )
 
@@ -26,10 +24,10 @@ add_custom_command(OUTPUT ${MODULE_NAME}.ko
         M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
         -E "MODULE_NAME := ${MODULE_NAME}"
     VERBATIM
-    DEPENDS ${MODULE_SOURCES}
+    DEPENDS Kbuild ${MODULE_SOURCES}
 )
 
-add_custom_target(dmabuf
+add_custom_target(driver
     ALL
     DEPENDS ${MODULE_NAME}.ko
 )

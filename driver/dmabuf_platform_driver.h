@@ -69,14 +69,14 @@ err_free:
 static struct chrdev_struct* dmabuf_chrdev;
 
 static
-loff_t dmabuf_chrdev_llseek(struct file* file, loff_t loff, int whence) {
+loff_t dmabuf_llseek(struct file* file, loff_t loff, int whence) {
     if(whence != SEEK_SET) return -EINVAL;
     file->f_pos = loff;
     return loff;
 }
 
 static
-ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* loff) {
+ssize_t dmabuf_read(struct file* file, char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
     loff_t offset = *loff;
 
@@ -107,7 +107,7 @@ ssize_t dmabuf_chrdev_read(struct file* file, char __user* user_buffer, size_t s
 }
 
 static
-ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* loff) {
+ssize_t dmabuf_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
     loff_t offset = *loff;
 
@@ -138,7 +138,7 @@ ssize_t dmabuf_chrdev_write(struct file* file, const char __user* user_buffer, s
 }
 
 static
-int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
+int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
     int error = 0;
     size_t size = 0;
     size_t offset = 0;
@@ -187,14 +187,14 @@ int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
 }
 
 static
-int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
+int dmabuf_open(struct inode* inode, struct file* file) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     return 0;
 }
 
 static
-int dmabuf_chrdev_release(struct inode* inode, struct file* file) {
+int dmabuf_release(struct inode* inode, struct file* file) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     return 0;
@@ -203,12 +203,12 @@ int dmabuf_chrdev_release(struct inode* inode, struct file* file) {
 static
 struct file_operations dmabuf_chrdev_fops = {
     .owner = THIS_MODULE,
-    .llseek = dmabuf_chrdev_llseek,
-    .read = dmabuf_chrdev_read,
-    .write = dmabuf_chrdev_write,
-    .mmap = dmabuf_chrdev_mmap,
-    .open = dmabuf_chrdev_open,
-    .release = dmabuf_chrdev_release,
+    .llseek = dmabuf_llseek,
+    .read = dmabuf_read,
+    .write = dmabuf_write,
+    .mmap = dmabuf_mmap,
+    .open = dmabuf_open,
+    .release = dmabuf_release,
 };
 
 

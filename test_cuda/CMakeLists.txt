@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.8)
-
 project(test_cuda)
 
 find_package(CUDA 11 REQUIRED)
