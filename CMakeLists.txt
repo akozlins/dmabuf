@@ -12,7 +12,7 @@ if(KERNEL_RELEASE STREQUAL "")
 endif()
 
 set(KDIR "/lib/modules/${KERNEL_RELEASE}/build")
-message("I [] KERNEL = '${KERNEL}'")
+message("I [] KDIR = '${KDIR}'")
 
 set(MODULE_NAME dmabuf)
 
