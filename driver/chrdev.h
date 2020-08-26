@@ -1,7 +1,7 @@
 
 #include <linux/cdev.h>
 
-struct chrdev_struct {
+struct chrdev {
     dev_t dev;
     struct class* class;
     struct cdev cdev;
@@ -9,7 +9,7 @@ struct chrdev_struct {
 };
 
 static
-void chrdev_free(struct chrdev_struct* chrdev) {
+void chrdev_free(struct chrdev* chrdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     if(chrdev == NULL) return;
@@ -35,13 +35,13 @@ void chrdev_free(struct chrdev_struct* chrdev) {
 }
 
 static
-struct chrdev_struct* chrdev_alloc(struct file_operations* fops) {
-    int error = 0;
-    struct chrdev_struct* chrdev;
+struct chrdev* chrdev_alloc(struct file_operations* fops) {
+    long error = 0;
+    struct chrdev* chrdev = NULL;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev = kzalloc(sizeof(struct chrdev_struct), 0);
+    chrdev = kzalloc(sizeof(struct chrdev), 0);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;

@@ -66,7 +66,7 @@ err_free:
 
 
 #include "chrdev.h"
-static struct chrdev_struct* dmabuf_chrdev;
+static struct chrdev* dmabuf_chrdev;
 
 static
 loff_t dmabuf_llseek(struct file* file, loff_t loff, int whence) {
