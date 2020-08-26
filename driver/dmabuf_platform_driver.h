@@ -9,7 +9,6 @@ struct dmabuf {
     void* cpu_addr;
     dma_addr_t dma_addr;
 };
-static struct dmabuf* dmabuf = NULL;
 
 static
 void dmabuf_free(struct dmabuf* dmabuf) {
@@ -66,7 +65,6 @@ err_out:
 
 
 #include "chrdev.h"
-static struct chrdev* dmabuf_chrdev;
 
 static
 loff_t dmabuf_llseek(struct file* file, loff_t loff, int whence) {
@@ -79,8 +77,13 @@ static
 ssize_t dmabuf_read(struct file* file, char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
     loff_t offset = *loff;
+    struct dmabuf* dmabuf = file->private_data;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+    if(dmabuf == NULL) {
+        return -ENOMEM;
+    }
 
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
         size_t k;
@@ -110,8 +113,13 @@ static
 ssize_t dmabuf_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* loff) {
     ssize_t n = 0;
     loff_t offset = *loff;
+    struct dmabuf* dmabuf = file->private_data;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+    if(dmabuf == NULL) {
+        return -ENOMEM;
+    }
 
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
         size_t k;
@@ -142,6 +150,7 @@ int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
     int error = 0;
     size_t size = 0;
     size_t offset = 0;
+    struct dmabuf* dmabuf = file->private_data;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
     pr_info("  vm_start = %lx\n", vma->vm_start);
@@ -183,7 +192,18 @@ int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
 
 static
 int dmabuf_open(struct inode* inode, struct file* file) {
+    struct chrdev* chrdev;
+    struct dmabuf* dmabuf;
+
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+
+    chrdev = container_of(inode->i_cdev, struct chrdev, cdev);
+    dmabuf = dev_get_drvdata(chrdev->device);
+    if(dmabuf == NULL) {
+        return -ENOMEM;
+    }
+
+    file->private_data = dmabuf;
 
     return 0;
 }
@@ -209,8 +229,26 @@ struct file_operations dmabuf_chrdev_fops = {
 
 
 static
+void dmabuf_platform_driver_cleanup(struct platform_device* pdev) {
+    struct chrdev* chrdev = NULL;
+    struct dmabuf* dmabuf = NULL;
+
+    chrdev = platform_get_drvdata(pdev);
+    platform_set_drvdata(pdev, NULL);
+    if(chrdev != NULL) {
+        dmabuf = dev_get_drvdata(chrdev->device);
+        dev_set_drvdata(chrdev->device, NULL);
+    }
+
+    dmabuf_free(dmabuf);
+    chrdev_free(chrdev);
+}
+
+static
 int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     long error = 0;
+    struct chrdev* chrdev = NULL;
+    struct dmabuf* dmabuf = NULL;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
@@ -220,12 +258,14 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    dmabuf_chrdev = chrdev_alloc(&dmabuf_chrdev_fops);
-    if(IS_ERR_OR_NULL(dmabuf_chrdev)) {
-        dmabuf_chrdev = NULL;
+    chrdev = chrdev_alloc(&dmabuf_chrdev_fops);
+    if(IS_ERR_OR_NULL(chrdev)) {
+        error = PTR_ERR(chrdev);
+        chrdev = NULL;
         pr_err("[%s/%s] chrdev_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
+    platform_set_drvdata(pdev, chrdev);
 
     dmabuf = dmabuf_alloc(&pdev->dev, 64);
     if(IS_ERR_OR_NULL(dmabuf)) {
@@ -233,10 +273,12 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         dmabuf = NULL;
         goto err_out;
     }
+    dev_set_drvdata(chrdev->device, dmabuf);
 
     return 0;
 
 err_out:
+    dmabuf_platform_driver_cleanup(pdev);
     return error;
 }
 
@@ -244,8 +286,7 @@ static
 int dmabuf_platform_driver_remove(struct platform_device* pdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    dmabuf_free(dmabuf);
-    chrdev_free(dmabuf_chrdev);
+    dmabuf_platform_driver_cleanup(pdev);
 
     return 0;
 }
