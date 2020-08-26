@@ -3,132 +3,36 @@
 #include "dmabuf.h"
 
 static
-loff_t dmabuf_llseek(struct file* file, loff_t loff, int whence) {
+loff_t chrdev_llseek(struct file* file, loff_t loff, int whence) {
     if(whence != SEEK_SET) return -EINVAL;
     file->f_pos = loff;
     return loff;
 }
 
 static
-ssize_t dmabuf_read(struct file* file, char __user* user_buffer, size_t size, loff_t* loff) {
-    ssize_t n = 0;
-    loff_t offset = *loff;
+ssize_t chrdev_read(struct file* file, char __user* user_buffer, size_t size, loff_t* offset) {
     struct dmabuf* dmabuf = file->private_data;
-
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-
-    if(dmabuf == NULL) {
-        return -ENOMEM;
-    }
-
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
-        size_t k;
-
-        if(offset > dmabuf[i].size) continue;
-
-        k = dmabuf[i].size - offset;
-        if(k > size) k = size;
-
-        pr_info("[%s/%s] copy_to_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
-        if(copy_to_user(user_buffer, dmabuf[i].cpu_addr + offset, k)) {
-            return -EFAULT;
-        }
-        n += k;
-        user_buffer += k;
-        size -= k;
-        offset += k;
-
-        if(size == 0) break;
-    }
-
-    *loff += n;
+    ssize_t n = dmabuf_read(dmabuf, user_buffer, size, *offset);
+    *offset += n;
     return n;
 }
 
 static
-ssize_t dmabuf_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* loff) {
-    ssize_t n = 0;
-    loff_t offset = *loff;
+ssize_t chrdev_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* offset) {
     struct dmabuf* dmabuf = file->private_data;
-
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-
-    if(dmabuf == NULL) {
-        return -ENOMEM;
-    }
-
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
-        size_t k;
-
-        if(offset > dmabuf[i].size) continue;
-
-        k = dmabuf[i].size - offset;
-        if(k > size) k = size;
-
-        pr_info("[%s/%s] copy_from_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
-        if(copy_from_user(dmabuf[i].cpu_addr + offset, user_buffer, k)) {
-            return -EFAULT;
-        }
-        n += k;
-        user_buffer += k;
-        size -= k;
-        offset += k;
-
-        if(size == 0) break;
-    }
-
-    *loff += n;
+    ssize_t n = dmabuf_write(dmabuf, user_buffer, size, *offset);
+    *offset += n;
     return n;
 }
 
 static
-int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
-    int error = 0;
-    size_t size = 0;
-    size_t offset = 0;
+int chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
     struct dmabuf* dmabuf = file->private_data;
-
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-
-    if(dmabuf == NULL) {
-        return -ENOMEM;
-    }
-
-    pr_info("  vm_start = %lx\n", vma->vm_start);
-    pr_info("  vm_end = %lx\n", vma->vm_end);
-    pr_info("  vm_pgoff = %lx\n", vma->vm_pgoff);
-
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) size += dmabuf[i].size;
-    if(vma_pages(vma) != PAGE_ALIGN(size) >> PAGE_SHIFT) {
-        return -EINVAL;
-    }
-    if(vma->vm_pgoff != 0) {
-        return -EINVAL;
-    }
-
-    vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
-    // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
-    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
-
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
-        pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        error = remap_pfn_range(vma,
-            vma->vm_start + offset,
-            PHYS_PFN(dma_to_phys(dmabuf[i].dev, dmabuf[i].dma_addr)), // see `dma_direct_mmap`
-            dmabuf[i].size, vma->vm_page_prot
-        );
-        if(error) {
-            pr_err("[%s/%s] remap_pfn_range: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
-            break;
-        }
-        offset += dmabuf[i].size;
-    }
-
-    return error;
+    return dmabuf_mmap(dmabuf, vma);
 }
 
 static
-int dmabuf_open(struct inode* inode, struct file* file) {
+int chrdev_open(struct inode* inode, struct file* file) {
     struct chrdev* chrdev;
     struct dmabuf* dmabuf;
 
@@ -146,7 +50,7 @@ int dmabuf_open(struct inode* inode, struct file* file) {
 }
 
 static
-int dmabuf_release(struct inode* inode, struct file* file) {
+int chrdev_release(struct inode* inode, struct file* file) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     return 0;
@@ -155,12 +59,12 @@ int dmabuf_release(struct inode* inode, struct file* file) {
 static
 struct file_operations dmabuf_chrdev_fops = {
     .owner = THIS_MODULE,
-    .llseek = dmabuf_llseek,
-    .read = dmabuf_read,
-    .write = dmabuf_write,
-    .mmap = dmabuf_mmap,
-    .open = dmabuf_open,
-    .release = dmabuf_release,
+    .llseek = chrdev_llseek,
+    .read = chrdev_read,
+    .write = chrdev_write,
+    .mmap = chrdev_mmap,
+    .open = chrdev_open,
+    .release = chrdev_release,
 };
 
 
