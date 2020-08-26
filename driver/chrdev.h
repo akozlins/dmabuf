@@ -14,16 +14,14 @@ void chrdev_free(struct chrdev_struct* chrdev) {
 
     if(chrdev == NULL) return;
 
-    if(&chrdev->cdev.dev != 0) {
-        cdev_del(&chrdev->cdev);
-        chrdev->cdev.dev = 0;
-    }
-
     if(chrdev->device != NULL) {
         device_destroy(chrdev->class, chrdev->dev);
         chrdev->device = NULL;
     }
-
+    if(chrdev->cdev.dev != 0) {
+        cdev_del(&chrdev->cdev);
+        chrdev->cdev.dev = 0;
+    }
     if(chrdev->class != NULL) {
         class_destroy(chrdev->class);
         chrdev->class = NULL;
