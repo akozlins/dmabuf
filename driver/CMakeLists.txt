@@ -32,6 +32,15 @@ add_custom_target(driver
     DEPENDS ${MODULE_NAME}.ko
 )
 
+add_custom_target(insmod
+    COMMAND sudo insmod ${MODULE_NAME}.ko
+    DEPENDS ${MODULE_NAME}.ko
+)
+
+add_custom_target(rmmod
+    COMMAND sudo rmmod ${MODULE_NAME}
+)
+
 
 
 add_executable(clion_driver

@@ -153,20 +153,21 @@ int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
     struct dmabuf* dmabuf = file->private_data;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-    pr_info("  vm_start = %lx\n", vma->vm_start);
-    pr_info("  vm_end = %lx\n", vma->vm_end);
-    pr_info("  vm_pgoff = %lx\n", vma->vm_pgoff);
 
     if(dmabuf == NULL) {
         return -ENOMEM;
     }
 
+    pr_info("  vm_start = %lx\n", vma->vm_start);
+    pr_info("  vm_end = %lx\n", vma->vm_end);
+    pr_info("  vm_pgoff = %lx\n", vma->vm_pgoff);
+
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) size += dmabuf[i].size;
     if(vma_pages(vma) != PAGE_ALIGN(size) >> PAGE_SHIFT) {
-        return -ENXIO;
+        return -EINVAL;
     }
     if(vma->vm_pgoff != 0) {
-        return -ENXIO;
+        return -EINVAL;
     }
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;

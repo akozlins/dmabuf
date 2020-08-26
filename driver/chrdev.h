@@ -71,7 +71,7 @@ struct chrdev* chrdev_alloc(struct file_operations* fops) {
         pr_err("[%s/%s] cdev_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
-    chrdev->device = device_create(chrdev->class, NULL, chrdev->dev, NULL, THIS_MODULE->name, 0);
+    chrdev->device = device_create(chrdev->class, NULL, chrdev->dev, NULL, "%s", THIS_MODULE->name);
     if(IS_ERR_OR_NULL(chrdev->device)) {
         error = PTR_ERR(chrdev->device);
         chrdev->device = NULL;
