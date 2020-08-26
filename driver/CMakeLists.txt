@@ -31,3 +31,28 @@ add_custom_target(driver
     ALL
     DEPENDS ${MODULE_NAME}.ko
 )
+
+
+
+add_executable(clion_driver
+    ${MODULE_SOURCES}
+)
+target_include_directories(clion_driver SYSTEM PRIVATE
+    ${KDIR}/include
+    ${KDIR}/include/uapi
+    ${KDIR}/include/generated
+    ${KDIR}/include/generated/uapi
+    ${KDIR}/arch/x86/include
+    ${KDIR}/arch/x86/include/uapi
+    ${KDIR}/arch/x86/include/generated
+    ${KDIR}/arch/x86/include/generated/uapi
+)
+target_compile_options(clion_driver PRIVATE
+    -include ${KDIR}/include/linux/kconfig.h
+    -include ${KDIR}/include/linux/compiler_types.h
+    -D__KERNEL__
+    -DMODULE
+)
+set_target_properties(clion_driver PROPERTIES
+    EXCLUDE_FROM_ALL 1
+)
