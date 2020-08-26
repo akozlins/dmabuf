@@ -1,5 +1,7 @@
 
 #include <linux/cdev.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
 
 struct chrdev {
     dev_t dev;
