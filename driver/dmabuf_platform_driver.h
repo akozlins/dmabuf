@@ -10,18 +10,17 @@ struct dmabuf {
     dma_addr_t dma_addr;
 };
 static struct dmabuf* dmabuf = NULL;
-static int dmabuf_n = 64;
 
 static
-void dmabuf_free(struct platform_device* pdev) {
+void dmabuf_free(struct dmabuf* dmabuf) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     if(dmabuf == NULL) return;
 
-    for(int i = 0; i < dmabuf_n; i++) {
-        if(dmabuf[i].cpu_addr == NULL) continue;
+    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
         pr_info("[%s/%s] dma_free_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         dma_free_coherent(dmabuf[i].dev, dmabuf[i].size, dmabuf[i].cpu_addr, dmabuf[i].dma_addr);
+        dmabuf[i].cpu_addr = NULL;
     }
 
     kfree(dmabuf);
@@ -29,38 +28,39 @@ void dmabuf_free(struct platform_device* pdev) {
 }
 
 static
-int dmabuf_alloc(struct platform_device* pdev) {
+struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
     long error = 0;
+    struct dmabuf* dmabuf = NULL;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    dmabuf = kzalloc(dmabuf_n * sizeof(struct dmabuf), GFP_ATOMIC);
+    dmabuf = kzalloc((n + 1) * sizeof(struct dmabuf), GFP_ATOMIC);
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         dmabuf = NULL;
         pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
-        goto err_free;
+        goto err_out;
     }
 
-    for(int i = 0; i < dmabuf_n; i++) {
-        dmabuf[i].dev = &pdev->dev;
+    for(int i = 0; i < n; i++) {
+        dmabuf[i].dev = dev;
         dmabuf[i].size = 1024 * PAGE_SIZE;
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dmabuf[i].cpu_addr = dma_alloc_coherent(&pdev->dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
+        dmabuf[i].cpu_addr = dma_alloc_coherent(dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(dmabuf[i].cpu_addr)) {
             error = PTR_ERR(dmabuf[i].cpu_addr);
             dmabuf[i].cpu_addr = NULL;
             pr_err("[%s/%s] dma_alloc_coherent: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
-            goto err_free;
+            goto err_out;
         }
         pr_info("  cpu_addr = %px\n", dmabuf[i].cpu_addr);
     }
 
-    return 0;
+    return dmabuf;
 
-err_free:
-    dmabuf_free(pdev);
-    return error;
+err_out:
+    dmabuf_free(dmabuf);
+    return ERR_PTR(error);
 }
 
 
@@ -82,7 +82,7 @@ ssize_t dmabuf_read(struct file* file, char __user* user_buffer, size_t size, lo
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    for(int i = 0; i < dmabuf_n; i++, offset -= dmabuf[i].size) {
+    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
         size_t k;
 
         if(offset > dmabuf[i].size) continue;
@@ -113,7 +113,7 @@ ssize_t dmabuf_write(struct file* file, const char __user* user_buffer, size_t s
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    for(int i = 0; i < dmabuf_n; i++, offset -= dmabuf[i].size) {
+    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
         size_t k;
 
         if(offset > dmabuf[i].size) continue;
@@ -152,7 +152,7 @@ int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
         return -ENOMEM;
     }
 
-    for(int i = 0; i < dmabuf_n; i++) size += dmabuf[i].size;
+    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) size += dmabuf[i].size;
     if(vma_pages(vma) != PAGE_ALIGN(size) >> PAGE_SHIFT) {
         return -ENXIO;
     }
@@ -164,12 +164,7 @@ int dmabuf_mmap(struct file* file, struct vm_area_struct* vma) {
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
-    for(int i = 0; i < dmabuf_n; i++) {
-        if(dmabuf[i].cpu_addr == NULL) {
-            error = -ENOMEM;
-            break;
-        }
-
+    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
         pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         error = remap_pfn_range(vma,
             vma->vm_start + offset,
@@ -225,15 +220,17 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    error = dmabuf_alloc(pdev);
-    if(error) {
-        goto err_out;
-    }
-
     dmabuf_chrdev = chrdev_alloc(&dmabuf_chrdev_fops);
     if(IS_ERR_OR_NULL(dmabuf_chrdev)) {
         dmabuf_chrdev = NULL;
         pr_err("[%s/%s] chrdev_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        goto err_out;
+    }
+
+    dmabuf = dmabuf_alloc(&pdev->dev, 64);
+    if(IS_ERR_OR_NULL(dmabuf)) {
+        error = PTR_ERR(dmabuf);
+        dmabuf = NULL;
         goto err_out;
     }
 
@@ -247,8 +244,8 @@ static
 int dmabuf_platform_driver_remove(struct platform_device* pdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
+    dmabuf_free(dmabuf);
     chrdev_free(dmabuf_chrdev);
-    dmabuf_free(pdev);
 
     return 0;
 }
