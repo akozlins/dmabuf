@@ -43,7 +43,7 @@ struct chrdev* chrdev_alloc(struct file_operations* fops) {
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev = kzalloc(sizeof(struct chrdev), 0);
+    chrdev = kzalloc(sizeof(struct chrdev), GFP_ATOMIC);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
