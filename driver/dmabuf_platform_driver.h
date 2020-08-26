@@ -30,7 +30,7 @@ void dmabuf_free(struct platform_device* pdev) {
 
 static
 int dmabuf_alloc(struct platform_device* pdev) {
-    int error = 0;
+    long error = 0;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
@@ -38,7 +38,7 @@ int dmabuf_alloc(struct platform_device* pdev) {
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         dmabuf = NULL;
-        pr_err("[%s/%s] kzalloc: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_free;
     }
 
@@ -50,7 +50,7 @@ int dmabuf_alloc(struct platform_device* pdev) {
         if(IS_ERR_OR_NULL(dmabuf[i].cpu_addr)) {
             error = PTR_ERR(dmabuf[i].cpu_addr);
             dmabuf[i].cpu_addr = NULL;
-            pr_err("[%s/%s] dma_alloc_coherent: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+            pr_err("[%s/%s] dma_alloc_coherent: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
             goto err_free;
         }
         pr_info("  cpu_addr = %px\n", dmabuf[i].cpu_addr);
@@ -215,13 +215,13 @@ struct file_operations dmabuf_chrdev_fops = {
 
 static
 int dmabuf_platform_driver_probe(struct platform_device* pdev) {
-    int error = 0;
+    long error = 0;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
     if(error) {
-        pr_err("[%s/%s] dma_set_mask_and_coherent: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] dma_set_mask_and_coherent: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 
@@ -233,7 +233,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     dmabuf_chrdev = chrdev_alloc(&dmabuf_chrdev_fops);
     if(IS_ERR_OR_NULL(dmabuf_chrdev)) {
         dmabuf_chrdev = NULL;
-        pr_err("[%s/%s] chrdev_alloc: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] chrdev_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 

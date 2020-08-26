@@ -3,7 +3,7 @@
 
 static
 struct platform_device* dmabuf_platform_device_register(const char* name) {
-    int error = 0;
+    long error = 0;
     struct platform_device* pdev = NULL;
 
     // TODO: use platform_device_register_simple
@@ -12,13 +12,13 @@ struct platform_device* dmabuf_platform_device_register(const char* name) {
     if(IS_ERR_OR_NULL(pdev)) {
         error = PTR_ERR(pdev);
         pdev = NULL;
-        pr_err("[%s/%s] platform_device_alloc: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] platform_device_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 
     error = platform_device_add(pdev);
     if(error) {
-        pr_err("[%s/%s] platform_device_alloc: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] platform_device_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_pdev_put;
     }
 
