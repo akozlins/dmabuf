@@ -18,7 +18,7 @@ struct platform_device* dmabuf_platform_device_register(const char* name) {
 
     error = platform_device_add(pdev);
     if(error) {
-        pr_err("[%s/%s] platform_device_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] platform_device_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_pdev_put;
     }
 

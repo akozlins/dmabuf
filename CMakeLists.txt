@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(dmabuf LANGUAGES C)
+project(dmabuf)
 
 add_definitions(-Wall)
 

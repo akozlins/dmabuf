@@ -32,8 +32,11 @@ add_custom_target(driver
     DEPENDS ${MODULE_NAME}.ko
 )
 
+
+
 add_custom_target(insmod
     COMMAND sudo insmod ${MODULE_NAME}.ko
+    COMMAND sudo chmod a+rw /dev/${MODULE_NAME}
     DEPENDS ${MODULE_NAME}.ko
 )
 

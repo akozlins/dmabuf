@@ -22,7 +22,6 @@ void dmabuf_free(struct dmabuf* dmabuf) {
     }
 
     kfree(dmabuf);
-    dmabuf = NULL;
 }
 
 static
@@ -52,11 +51,12 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
             goto err_out;
         }
         pr_info("  cpu_addr = %px\n", dmabuf[i].cpu_addr);
+        pr_info("  dma_addr = %llx\n", dmabuf[i].dma_addr);
     }
 
     return dmabuf;
 
-    err_out:
+err_out:
     dmabuf_free(dmabuf);
     return ERR_PTR(error);
 }
@@ -66,8 +66,6 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error = 0;
     size_t size = 0;
     size_t offset = 0;
-
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     if(dmabuf == NULL) {
         return -ENOMEM;
@@ -92,9 +90,9 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
         pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         error = remap_pfn_range(vma,
-                                vma->vm_start + offset,
-                                PHYS_PFN(dma_to_phys(dmabuf[i].dev, dmabuf[i].dma_addr)), // see `dma_direct_mmap`
-                                dmabuf[i].size, vma->vm_page_prot
+            vma->vm_start + offset,
+            PHYS_PFN(dma_to_phys(dmabuf[i].dev, dmabuf[i].dma_addr)), // see `dma_direct_mmap`
+            dmabuf[i].size, vma->vm_page_prot
         );
         if(error) {
             pr_err("[%s/%s] remap_pfn_range: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
@@ -110,9 +108,8 @@ static
 ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size, loff_t offset) {
     ssize_t n = 0;
 
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-
     if(dmabuf == NULL) {
+        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
         return -ENOMEM;
     }
 
@@ -126,6 +123,7 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size
 
         pr_info("[%s/%s] copy_to_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
         if(copy_to_user(user_buffer, dmabuf[i].cpu_addr + offset, k)) {
+            pr_err("[%s/%s] copy_to_user != 0\n", THIS_MODULE->name, __FUNCTION__);
             return -EFAULT;
         }
         n += k;
@@ -143,9 +141,8 @@ static
 ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size_t size, loff_t offset) {
     ssize_t n = 0;
 
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
-
     if(dmabuf == NULL) {
+        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
         return -ENOMEM;
     }
 
@@ -159,6 +156,7 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
 
         pr_info("[%s/%s] copy_from_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
         if(copy_from_user(dmabuf[i].cpu_addr + offset, user_buffer, k)) {
+            pr_err("[%s/%s] copy_from_user != 0\n", THIS_MODULE->name, __FUNCTION__);
             return -EFAULT;
         }
         n += k;
