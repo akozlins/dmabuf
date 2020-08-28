@@ -30,7 +30,7 @@ void chrdev_free(struct chrdev* chrdev) {
         struct chrdev_minor* minor = &chrdev->minors[i];
 
         if(minor->device != NULL) {
-            device_destroy(chrdev->class, chrdev->dev);
+            device_destroy(chrdev->class, minor->cdev.dev);
             minor->device = NULL;
         }
 
@@ -52,6 +52,25 @@ void chrdev_free(struct chrdev* chrdev) {
     kfree(chrdev->minors);
 err_free_chrdev:
     kfree(chrdev);
+}
+
+static
+int chrdev_device_create(struct chrdev* chrdev, int i) {
+    long error = 0;
+    struct chrdev_minor* minor = &chrdev->minors[i];
+
+    pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
+
+    minor->device = device_create(chrdev->class, NULL, minor->cdev.dev, NULL, "%s%d", THIS_MODULE->name, i);
+    if(IS_ERR_OR_NULL(minor->device)) {
+        error = PTR_ERR(minor->device);
+        minor->device = NULL;
+        pr_err("[%s/%s] device_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        goto err_out;
+    }
+
+err_out:
+    return error;
 }
 
 static
@@ -94,21 +113,15 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
 
     for(int i = 0; i < count; i++) {
         struct chrdev_minor* minor = &chrdev->minors[i];
+        dev_t devt = MKDEV(MAJOR(chrdev->devt), MINOR(chrdev->devt) + i);
 
         cdev_init(&minor->cdev, fops);
         minor->cdev.owner = THIS_MODULE;
-        error = cdev_add(&minor->cdev, chrdev->dev, 1);
+
+        error = cdev_add(&minor->cdev, devt, 1);
         if(error) {
             minor->cdev.dev = 0;
             pr_err("[%s/%s] cdev_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
-            goto err_out;
-        }
-
-        minor->device = device_create(chrdev->class, NULL, chrdev->dev, NULL, "%s%d", THIS_MODULE->name, i);
-        if(IS_ERR_OR_NULL(minor->device)) {
-            error = PTR_ERR(minor->device);
-            minor->device = NULL;
-            pr_err("[%s/%s] device_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
             goto err_out;
         }
     }
