@@ -3,17 +3,15 @@
 
 static
 void dmabuf_platform_driver_cleanup(struct platform_device* pdev) {
-    struct chrdev* chrdev = NULL;
-    struct dmabuf* dmabuf = NULL;
-
-    chrdev = platform_get_drvdata(pdev);
-    platform_set_drvdata(pdev, NULL);
+    struct chrdev* chrdev = platform_get_drvdata(pdev);
     if(chrdev != NULL) {
-        dmabuf = dev_get_drvdata(chrdev->device);
-        dev_set_drvdata(chrdev->device, NULL);
+        for(int i = 0; i < chrdev->count; i++) {
+            struct dmabuf* dmabuf = dev_get_drvdata(chrdev->minors[i].device);
+            dev_set_drvdata(chrdev->minors[i].device, NULL);
+            dmabuf_free(dmabuf);
+        }
     }
-
-    dmabuf_free(dmabuf);
+    platform_set_drvdata(pdev, NULL);
     chrdev_free(chrdev);
 }
 
@@ -21,7 +19,6 @@ static
 int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     long error = 0;
     struct chrdev* chrdev = NULL;
-    struct dmabuf* dmabuf = NULL;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
@@ -31,7 +28,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    chrdev = chrdev_alloc(&dmabuf_chrdev_fops);
+    chrdev = chrdev_alloc(1, &dmabuf_chrdev_fops);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
@@ -40,13 +37,15 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     }
     platform_set_drvdata(pdev, chrdev);
 
-    dmabuf = dmabuf_alloc(&pdev->dev, 256); // 1 GB
-    if(IS_ERR_OR_NULL(dmabuf)) {
-        error = PTR_ERR(dmabuf);
-        dmabuf = NULL;
-        goto err_out;
+    for(int i = 0; i < chrdev->count; i++) {
+        struct dmabuf* dmabuf = dmabuf_alloc(&pdev->dev, 256); // 1 GB
+        if(IS_ERR_OR_NULL(dmabuf)) {
+            error = PTR_ERR(dmabuf);
+            dmabuf = NULL;
+            goto err_out;
+        }
+        dev_set_drvdata(chrdev->minors[i].device, dmabuf);
     }
-    dev_set_drvdata(chrdev->device, dmabuf);
 
     return 0;
 

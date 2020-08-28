@@ -33,8 +33,8 @@ int main() {
     cudaDeviceProp deviceProperties;
     CUDA_ASSERT(cudaGetDeviceProperties(&deviceProperties, device));
 
-    printf("I [] open('/dev/dmabuf')\n");
-    int fd = open("/dev/dmabuf", O_RDWR);
+    printf("I [] open('/dev/dmabuf0')\n");
+    int fd = open("/dev/dmabuf0", O_RDWR);
     if(fd < 0) {
         printf("F [] open: errno = %d\n", errno);
         return EXIT_FAILURE;

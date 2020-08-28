@@ -38,7 +38,7 @@ add_custom_target(${MODULE_NAME}_module
 
 add_custom_target(${MODULE_NAME}_insmod
     COMMAND sudo insmod ${MODULE_NAME}.ko
-    COMMAND sudo chmod a+rw /dev/${MODULE_NAME}
+    COMMAND sudo chmod a+rw /dev/${MODULE_NAME}0
     VERBATIM
     DEPENDS ${MODULE_NAME}.ko
 )

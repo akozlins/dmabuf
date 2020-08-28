@@ -44,13 +44,13 @@ int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
 
 static
 int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
-    struct chrdev* chrdev;
+    struct chrdev_minor* chrdev_minor;
     struct dmabuf* dmabuf;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev = container_of(inode->i_cdev, struct chrdev, cdev);
-    dmabuf = dev_get_drvdata(chrdev->device);
+    chrdev_minor = container_of(inode->i_cdev, struct chrdev_minor, cdev);
+    dmabuf = dev_get_drvdata(chrdev_minor->device);
     if(dmabuf == NULL) {
         return -ENOMEM;
     }

@@ -13,7 +13,7 @@
 #include <memory>
 
 int main() {
-    int fd = open("/dev/dmabuf", O_RDWR | O_CLOEXEC);
+    int fd = open("/dev/dmabuf0", O_RDWR | O_CLOEXEC);
     if(fd < 0) {
         printf("F [] open: errno = %d\n", errno);
         return EXIT_FAILURE;
