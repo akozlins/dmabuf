@@ -29,31 +29,31 @@ int main() {
     auto wbuffer = std::make_unique<uint32_t[]>(size/4);
     for(int i = 0; i < size/4; i++) wbuffer[i] = i;
     int wn = write(fd, wbuffer.get(), size);
-    printf("wn = %d\n", wn);
+    printf("I [] wn = %d\n", wn);
 
     auto mmap_addr = (uint32_t*)mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(mmap_addr == MAP_FAILED) {
         printf("F [] mmap: errno = %d\n", errno);
         return EXIT_FAILURE;
     }
-    printf("mmap_addr = %p, errno = %d\n", mmap_addr, errno);
-    for(size_t i = 0; i < size/4; i++) {
+    printf("I [] mmap_addr = %p\n", mmap_addr);
+    for(int i = 0; i < size/4; i++) {
         if(mmap_addr[i] == wbuffer[i]) continue;
-        printf("E [] mmap_addr[%ld] != wbuffer[%ld]\n", i, i);
+        printf("E [] mmap_addr[%d] != wbuffer[%d]\n", i, i);
     }
     munmap(mmap_addr, size);
 
-    auto rbuffer = (uint32_t*)malloc(size);
-    for(size_t i = 0; i < size/4; i++) rbuffer[i] = 0;
-    if(lseek(fd, 0, SEEK_SET) == -1) {
-        printf("F [] lseek = -1\n");
+    auto rbuffer = std::make_unique<uint32_t[]>(size/4);
+    for(int i = 0; i < size/4; i++) rbuffer[i] = 0;
+    if(lseek(fd, 0, SEEK_SET) < 0) {
+        printf("F [] lseek < 0\n");
         return EXIT_FAILURE;
     }
-    int rn = read(fd, rbuffer, size);
-    printf("rn = %d\n", rn);
-    for(size_t i = 0; i < size/4; i++) {
+    int rn = read(fd, rbuffer.get(), size);
+    printf("I [] rn = %d\n", rn);
+    for(int i = 0; i < size/4; i++) {
         if(rbuffer[i] == wbuffer[i]) continue;
-        printf("E [] rbuffer[%ld] != wbuffer[%ld]\n", i, i);
+        printf("E [] rbuffer[%d] != wbuffer[%d]\n", i, i);
     }
 
     close(fd);

@@ -20,7 +20,7 @@ file(GLOB MODULE_SOURCES
 )
 
 add_custom_command(OUTPUT ${MODULE_NAME}.ko
-    COMMAND $(MAKE) -C ${KDIR} modules
+    COMMAND $(MAKE) -C ${KDIR} clean modules
         M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
         -E "MODULE_NAME := ${MODULE_NAME}"
     VERBATIM

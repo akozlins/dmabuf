@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <sys/mman.h>
 
@@ -15,7 +16,7 @@ void cuda_assert(cudaError_t cudaError, const char* function, const char* file, 
     if(abort) exit(EXIT_FAILURE);
 }
 
-#define CUDA_ASSERT(val) do { cuda_assert((val), __FUNCTION__, __FILE__, __LINE__); } while(0)
+#define CUDA_ASSERT(cudaError) do { cuda_assert((cudaError), __FUNCTION__, __FILE__, __LINE__); } while(0)
 
 __global__
 void kernel1(uint32_t* values) {
@@ -26,8 +27,11 @@ void kernel1(uint32_t* values) {
 
 __host__
 int main() {
-    CUDA_ASSERT(cudaSetDevice(0));
+    int device = 0;
+    CUDA_ASSERT(cudaSetDevice(device));
     CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost));
+    cudaDeviceProp deviceProperties;
+    CUDA_ASSERT(cudaGetDeviceProperties(&deviceProperties, device));
 
     printf("I [] open('/dev/dmabuf')\n");
     int fd = open("/dev/dmabuf", O_RDWR);
@@ -43,16 +47,19 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    const int nThreadsPerBlock = 1024;
-    const int nBlocks = size/4 / nThreadsPerBlock;
+    int nThreadsPerBlock = 1;
+    while(2 * nThreadsPerBlock <= deviceProperties.maxThreadsPerBlock) nThreadsPerBlock *= 2;
+    int nBlocks = size/4 / nThreadsPerBlock;
+    printf("I [] nThreadsPerBlock = %d, nBlocks = %d\n", nThreadsPerBlock, nBlocks);
 
     uint32_t* wvalues;
 //    wvalues = (uint32_t*)malloc(size);
-    cudaMallocHost(&wvalues, size);
-    for(int i = 0; i < size/4; i++) wvalues[i] = i;
-    write(fd, wvalues, size);
+//    cudaMallocHost(&wvalues, size);
+//    write(fd, wvalues, size);
     printf("I [] mmap\n");
     wvalues = (uint32_t*)mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    printf("I [] mmap = %p\n", wvalues);
+    for(int i = 0; i < size/4; i++) wvalues[i] = i;
     if(wvalues == MAP_FAILED) {
         printf("F [] mmap: errno = %d\n", errno);
         return EXIT_FAILURE;
