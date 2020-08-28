@@ -95,6 +95,7 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
         struct chrdev_minor* minor = &chrdev->minors[i];
 
         cdev_init(&minor->cdev, fops);
+        minor->cdev.owner = THIS_MODULE;
         error = cdev_add(&minor->cdev, chrdev->dev, 1);
         if(error) {
             minor->cdev.dev = 0;

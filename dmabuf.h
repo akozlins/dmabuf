@@ -41,7 +41,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
 
     for(int i = 0; i < n; i++) {
         dmabuf[i].dev = dev;
-        dmabuf[i].size = 1024 * PAGE_SIZE;
+        dmabuf[i].size = 1024 << PAGE_SHIFT;
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         dmabuf[i].cpu_addr = dma_alloc_coherent(dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(dmabuf[i].cpu_addr)) {
