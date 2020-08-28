@@ -36,7 +36,12 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    size_t size = 64 * 1024 * 4096;
+    ssize_t size = lseek(fd, 0, SEEK_END);
+    printf("I [] size = %ld\n", size);
+    if(lseek(fd, 0, SEEK_SET) < 0 || size < 0) {
+        printf("F [] lseek < 0\n");
+        return EXIT_FAILURE;
+    }
 
     const int nThreadsPerBlock = 1024;
     const int nBlocks = size/4 / nThreadsPerBlock;

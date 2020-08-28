@@ -62,9 +62,19 @@ err_out:
 }
 
 static
+size_t dmabuf_size(struct dmabuf* dmabuf) {
+    size_t size = 0;
+    if(dmabuf != NULL) {
+        for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
+            size += dmabuf[i].size;
+        }
+    }
+    return size;
+}
+
+static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error = 0;
-    size_t size = 0;
     size_t offset = 0;
 
     if(dmabuf == NULL) {
@@ -75,8 +85,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     pr_info("  vm_end = %lx\n", vma->vm_end);
     pr_info("  vm_pgoff = %lx\n", vma->vm_pgoff);
 
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) size += dmabuf[i].size;
-    if(vma_pages(vma) != PAGE_ALIGN(size) >> PAGE_SHIFT) {
+    if(vma_pages(vma) != PAGE_ALIGN(dmabuf_size(dmabuf)) >> PAGE_SHIFT) {
         return -EINVAL;
     }
     if(vma->vm_pgoff != 0) {

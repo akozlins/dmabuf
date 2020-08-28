@@ -19,14 +19,15 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    size_t size = 64 * 1024 * 4096;
-
-    auto wbuffer = std::make_unique<uint32_t[]>(size/4);
-    for(size_t i = 0; i < size/4; i++) wbuffer[i] = i;
-    if(lseek(fd, 0, SEEK_SET) == -1) {
-        printf("F [] lseek = -1\n");
+    ssize_t size = lseek(fd, 0, SEEK_END);
+    printf("I [] size = %ld\n", size);
+    if(lseek(fd, 0, SEEK_SET) < 0 || size < 0) {
+        printf("F [] lseek < 0\n");
         return EXIT_FAILURE;
     }
+
+    auto wbuffer = std::make_unique<uint32_t[]>(size/4);
+    for(int i = 0; i < size/4; i++) wbuffer[i] = i;
     int wn = write(fd, wbuffer.get(), size);
     printf("wn = %d\n", wn);
 
