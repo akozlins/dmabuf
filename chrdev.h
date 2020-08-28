@@ -6,6 +6,7 @@
 struct chrdev_minor {
     struct cdev cdev;
     struct device* device;
+    void* private_data;
 };
 
 struct chrdev {
