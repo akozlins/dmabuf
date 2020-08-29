@@ -89,7 +89,7 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
 
     chrdev = kzalloc(sizeof(struct chrdev) + count * sizeof(struct chrdev_device), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
-        error = PTR_ERR(chrdev);
+        error = -ENOMEM;
         chrdev = NULL;
         pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
