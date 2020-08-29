@@ -17,23 +17,28 @@ struct chrdev {
 };
 
 static
+void chrdev_device_del(struct chrdev* chrdev, int i) {
+    struct chrdev_device* chrdev_device = &chrdev->devices[i];
+
+    if(chrdev_device->device != NULL) {
+        device_destroy(chrdev->class, chrdev_device->cdev.dev);
+        chrdev_device->device = NULL;
+    }
+
+    if(chrdev_device->cdev.count != 0) {
+        cdev_del(&chrdev_device->cdev);
+        chrdev_device->cdev.count = 0;
+    }
+}
+
+static
 void chrdev_free(struct chrdev* chrdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     if(chrdev == NULL) return;
 
     for(int i = 0; i < chrdev->count; i++) {
-        struct chrdev_device* device = &chrdev->device[i];
-
-        if(device->device != NULL) {
-            device_destroy(chrdev->class, device->cdev.dev);
-            device->device = NULL;
-        }
-
-        if(device->cdev.dev != 0) {
-            cdev_del(&device->cdev);
-            device->cdev.dev = 0;
-        }
+        chrdev_device_del(chrdev, i);
     }
 
     if(chrdev->class != NULL) {
@@ -49,21 +54,29 @@ void chrdev_free(struct chrdev* chrdev) {
 }
 
 static
-int chrdev_device_create(struct chrdev* chrdev, int i) {
+int chrdev_device_add(struct chrdev* chrdev, int i) {
     long error = 0;
-    struct chrdev_device* device = &chrdev->devices[i];
+    struct chrdev_device* chrdev_device = &chrdev->devices[i];
 
     pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
 
-    device->device = device_create(chrdev->class, NULL, device->cdev.dev, NULL, "%s%d", THIS_MODULE->name, i);
-    if(IS_ERR_OR_NULL(device->device)) {
-        error = PTR_ERR(device->device);
-        device->device = NULL;
+    error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
+    if(error) {
+        chrdev_device->cdev.count = 0;
+        pr_err("[%s/%s] cdev_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        goto err_out;
+    }
+
+    chrdev_device->device = device_create(chrdev->class, NULL, chrdev_device->cdev.dev, NULL, "%s%d", THIS_MODULE->name, i);
+    if(IS_ERR_OR_NULL(chrdev_device->device)) {
+        error = PTR_ERR(chrdev_device->device);
+        chrdev_device->device = NULL;
         pr_err("[%s/%s] device_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 
 err_out:
+    chrdev_device_del(chrdev, i);
     return error;
 }
 
@@ -100,17 +113,10 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
 
     for(int i = 0; i < count; i++) {
         struct chrdev_device* device = &chrdev->devices[i];
-        dev_t devt = MKDEV(MAJOR(chrdev->devt), MINOR(chrdev->devt) + i);
 
         cdev_init(&device->cdev, fops);
         device->cdev.owner = THIS_MODULE;
-
-        error = cdev_add(&device->cdev, devt, 1);
-        if(error) {
-            device->cdev.dev = 0;
-            pr_err("[%s/%s] cdev_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
-            goto err_out;
-        }
+        device->cdev.dev = MKDEV(MAJOR(chrdev->dev), MINOR(chrdev->dev) + i);
     }
 
     return chrdev;
