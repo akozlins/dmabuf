@@ -20,6 +20,8 @@ static
 void chrdev_device_del(struct chrdev* chrdev, int i) {
     struct chrdev_device* chrdev_device = &chrdev->devices[i];
 
+    pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
+
     if(chrdev_device->device != NULL) {
         device_destroy(chrdev->class, chrdev_device->cdev.dev);
         chrdev_device->device = NULL;
@@ -91,7 +93,8 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
 
     chrdev = kzalloc(sizeof(struct chrdev) + count * sizeof(struct chrdev_device), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
-        error = -ENOMEM;
+        error = PTR_ERR(chrdev);
+        if(error == 0) error = -ENOMEM;
         chrdev = NULL;
         pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
