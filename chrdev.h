@@ -75,6 +75,8 @@ int chrdev_device_add(struct chrdev* chrdev, int i) {
         goto err_out;
     }
 
+    return 0;
+
 err_out:
     chrdev_device_del(chrdev, i);
     return error;
