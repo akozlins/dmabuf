@@ -29,7 +29,7 @@ add_custom_command(OUTPUT ${MODULE_NAME}.ko
     DEPENDS Kbuild ${MODULE_SOURCES}
 )
 
-add_custom_target(${MODULE_NAME}_module
+add_custom_target(${MODULE_NAME}_kmodule
     ALL
     DEPENDS ${MODULE_NAME}.ko
 )
@@ -53,10 +53,10 @@ add_subdirectory(test_mmap)
 
 
 
-add_executable(${MODULE_NAME}_module_clion
+add_library(${MODULE_NAME}_kmodule_ide MODULE EXCLUDE_FROM_ALL
     ${MODULE_SOURCES}
 )
-target_include_directories(${MODULE_NAME}_module_clion SYSTEM PRIVATE
+target_include_directories(${MODULE_NAME}_kmodule_ide SYSTEM PRIVATE
     ${KDIR}/include
     ${KDIR}/include/uapi
     ${KDIR}/include/generated
@@ -66,12 +66,11 @@ target_include_directories(${MODULE_NAME}_module_clion SYSTEM PRIVATE
     ${KDIR}/arch/x86/include/generated
     ${KDIR}/arch/x86/include/generated/uapi
 )
-target_compile_options(${MODULE_NAME}_module_clion PRIVATE
+target_compile_options(${MODULE_NAME}_kmodule_ide PRIVATE
     -include ${KDIR}/include/linux/kconfig.h
     -include ${KDIR}/include/linux/compiler_types.h
     -D__KERNEL__
     -DMODULE
-)
-set_target_properties(${MODULE_NAME}_module_clion PROPERTIES
-    EXCLUDE_FROM_ALL 1
+    -DKBUILD_BASENAME='"${MODULE_NAME}"'
+    -DKBUILD_MODNAME='"${MODULE_NAME}"'
 )
