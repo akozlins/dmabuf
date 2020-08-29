@@ -44,18 +44,18 @@ int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
 
 static
 int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
-    struct chrdev_minor* chrdev_minor;
+    struct chrdev_device* chrdev_device;
     struct dmabuf* dmabuf;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev_minor = container_of(inode->i_cdev, struct chrdev_minor, cdev);
-    if(chrdev_minor == NULL) {
-        pr_err("[%s/%s] chrdev_minor == NULL\n", THIS_MODULE->name, __FUNCTION__);
+    chrdev_device = container_of(inode->i_cdev, struct chrdev_device, cdev);
+    if(chrdev_device == NULL) {
+        pr_err("[%s/%s] chrdev_device == NULL\n", THIS_MODULE->name, __FUNCTION__);
         return -ENODEV;
     }
 
-    dmabuf = chrdev_minor->private_data;
+    dmabuf = chrdev_device->private_data;
     if(dmabuf == NULL) {
         pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
         return -ENODEV;

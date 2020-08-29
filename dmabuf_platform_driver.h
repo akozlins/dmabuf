@@ -7,9 +7,9 @@ void dmabuf_platform_driver_cleanup(struct platform_device* pdev) {
     if(chrdev == NULL) return;
 
     for(int i = 0; i < chrdev->count; i++) {
-        struct dmabuf* dmabuf = chrdev->minors[i].private_data;
+        struct dmabuf* dmabuf = chrdev->devices[i].private_data;
         if(dmabuf == NULL) continue;
-        chrdev->minors[i].private_data = NULL;
+        chrdev->devices[i].private_data = NULL;
         dmabuf_free(dmabuf);
     }
 
@@ -46,7 +46,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
             dmabuf = NULL;
             goto err_out;
         }
-        chrdev->minors[i].private_data = dmabuf;
+        chrdev->devices[i].private_data = dmabuf;
 
         error = chrdev_device_create(chrdev, i);
         if(error) {

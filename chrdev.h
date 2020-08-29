@@ -3,7 +3,7 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 
-struct chrdev_minor {
+struct chrdev_device {
     struct cdev cdev;
     struct device* device;
     void* private_data;
@@ -13,7 +13,7 @@ struct chrdev {
     dev_t dev;
     struct class* class;
     int count;
-    struct chrdev_minor minors[];
+    struct chrdev_device devices[];
 };
 
 static
@@ -23,16 +23,16 @@ void chrdev_free(struct chrdev* chrdev) {
     if(chrdev == NULL) return;
 
     for(int i = 0; i < chrdev->count; i++) {
-        struct chrdev_minor* minor = &chrdev->minors[i];
+        struct chrdev_device* device = &chrdev->device[i];
 
-        if(minor->device != NULL) {
-            device_destroy(chrdev->class, minor->cdev.dev);
-            minor->device = NULL;
+        if(device->device != NULL) {
+            device_destroy(chrdev->class, device->cdev.dev);
+            device->device = NULL;
         }
 
-        if(minor->cdev.dev != 0) {
-            cdev_del(&minor->cdev);
-            minor->cdev.dev = 0;
+        if(device->cdev.dev != 0) {
+            cdev_del(&device->cdev);
+            device->cdev.dev = 0;
         }
     }
 
@@ -51,14 +51,14 @@ void chrdev_free(struct chrdev* chrdev) {
 static
 int chrdev_device_create(struct chrdev* chrdev, int i) {
     long error = 0;
-    struct chrdev_minor* minor = &chrdev->minors[i];
+    struct chrdev_device* device = &chrdev->devices[i];
 
     pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
 
-    minor->device = device_create(chrdev->class, NULL, minor->cdev.dev, NULL, "%s%d", THIS_MODULE->name, i);
-    if(IS_ERR_OR_NULL(minor->device)) {
-        error = PTR_ERR(minor->device);
-        minor->device = NULL;
+    device->device = device_create(chrdev->class, NULL, device->cdev.dev, NULL, "%s%d", THIS_MODULE->name, i);
+    if(IS_ERR_OR_NULL(device->device)) {
+        error = PTR_ERR(device->device);
+        device->device = NULL;
         pr_err("[%s/%s] device_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
@@ -74,7 +74,7 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev = kzalloc(sizeof(struct chrdev) + count * sizeof(struct chrdev_minor), GFP_KERNEL);
+    chrdev = kzalloc(sizeof(struct chrdev) + count * sizeof(struct chrdev_device), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
@@ -99,15 +99,15 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
     }
 
     for(int i = 0; i < count; i++) {
-        struct chrdev_minor* minor = &chrdev->minors[i];
+        struct chrdev_device* device = &chrdev->devices[i];
         dev_t devt = MKDEV(MAJOR(chrdev->devt), MINOR(chrdev->devt) + i);
 
-        cdev_init(&minor->cdev, fops);
-        minor->cdev.owner = THIS_MODULE;
+        cdev_init(&device->cdev, fops);
+        device->cdev.owner = THIS_MODULE;
 
-        error = cdev_add(&minor->cdev, devt, 1);
+        error = cdev_add(&device->cdev, devt, 1);
         if(error) {
-            minor->cdev.dev = 0;
+            device->cdev.dev = 0;
             pr_err("[%s/%s] cdev_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
             goto err_out;
         }
