@@ -13,7 +13,7 @@ struct chrdev {
     dev_t dev;
     struct class* class;
     int count;
-    struct chrdev_minor* minors;
+    struct chrdev_minor minors[];
 };
 
 static
@@ -21,10 +21,6 @@ void chrdev_free(struct chrdev* chrdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
     if(chrdev == NULL) return;
-
-    if(chrdev->minors == NULL) {
-        goto err_free_chrdev;
-    }
 
     for(int i = 0; i < chrdev->count; i++) {
         struct chrdev_minor* minor = &chrdev->minors[i];
@@ -49,8 +45,6 @@ void chrdev_free(struct chrdev* chrdev) {
         chrdev->dev = 0;
     }
 
-    kfree(chrdev->minors);
-err_free_chrdev:
     kfree(chrdev);
 }
 
@@ -80,17 +74,10 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev = kzalloc(sizeof(struct chrdev), GFP_KERNEL);
+    chrdev = kzalloc(sizeof(struct chrdev) + count * sizeof(struct chrdev_minor), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
-        pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
-        goto err_out;
-    }
-    chrdev->minors = kzalloc(count * sizeof(struct chrdev_minor), GFP_KERNEL);
-    if(IS_ERR_OR_NULL(chrdev->minors)) {
-        error = PTR_ERR(chrdev->minors);
-        chrdev->minors = NULL;
         pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
