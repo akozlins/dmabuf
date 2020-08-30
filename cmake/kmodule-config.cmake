@@ -38,6 +38,7 @@ macro(add_kmodule TARGET_NAME)
         COMMAND
             $(MAKE) -C ${KMODULE_KDIR} clean modules
             M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
+            W=1
         VERBATIM
         DEPENDS Kbuild ${ARGN}
     )
@@ -66,8 +67,8 @@ macro(add_kmodule TARGET_NAME)
     )
     target_compile_options(${TARGET_NAME}-ide PRIVATE
         ${KMODULE_COMPILE_DEFINITIONS}
-        -DKBUILD_BASENAME='"${TARGET_NAME}"'
-        -DKBUILD_MODNAME='"${TARGET_NAME}"'
+        -DKBUILD_BASENAME="${TARGET_NAME}"
+        -DKBUILD_MODNAME="${TARGET_NAME}"
     )
 
 endmacro()
