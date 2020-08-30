@@ -1,3 +1,3 @@
 
-ccflags-y := -std=gnu99 -Wall
-obj-m += $(MODULE_NAME).o
+ccflags-y := -std=gnu99
+obj-m := dmabuf.o

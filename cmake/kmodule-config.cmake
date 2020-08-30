@@ -32,29 +32,29 @@ set(KMODULE_COMPILE_DEFINITIONS
     -DMODULE
 )
 
-macro(add_kmodule TARGET_NAME MODULE_NAME)
+macro(add_kmodule TARGET_NAME)
 
-    add_custom_command(OUTPUT ${MODULE_NAME}.ko
-        COMMAND $(MAKE) -C ${KMODULE_KDIR} clean modules
+    add_custom_command(OUTPUT ${TARGET_NAME}.ko
+        COMMAND
+            $(MAKE) -C ${KMODULE_KDIR} clean modules
             M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
-            -E "MODULE_NAME := ${MODULE_NAME}"
         VERBATIM
         DEPENDS Kbuild ${ARGN}
     )
 
     add_custom_target(${TARGET_NAME}
         ALL
-        DEPENDS ${MODULE_NAME}.ko
+        DEPENDS ${TARGET_NAME}.ko
     )
 
     add_custom_target(${TARGET_NAME}-insmod
-        COMMAND sudo insmod ${MODULE_NAME}.ko
+        COMMAND sudo insmod ${TARGET_NAME}.ko
         VERBATIM
-        DEPENDS ${MODULE_NAME}.ko
+        DEPENDS ${TARGET_NAME}.ko
     )
 
     add_custom_target(${TARGET_NAME}-rmmod
-        COMMAND sudo rmmod ${MODULE_NAME}
+        COMMAND sudo rmmod ${TARGET_NAME}
         VERBATIM
     )
 
@@ -66,8 +66,8 @@ macro(add_kmodule TARGET_NAME MODULE_NAME)
     )
     target_compile_options(${TARGET_NAME}-ide PRIVATE
         ${KMODULE_COMPILE_DEFINITIONS}
-        -DKBUILD_BASENAME='"${MODULE_NAME}"'
-        -DKBUILD_MODNAME='"${MODULE_NAME}"'
+        -DKBUILD_BASENAME='"${TARGET_NAME}"'
+        -DKBUILD_MODNAME='"${TARGET_NAME}"'
     )
 
 endmacro()
