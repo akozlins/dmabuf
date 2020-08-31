@@ -10,6 +10,7 @@ struct chrdev_device {
 };
 
 struct chrdev {
+    char name[64];
     dev_t dev;
     struct class* class;
     int count;
@@ -69,7 +70,7 @@ int chrdev_device_add(struct chrdev* chrdev, int i) {
         goto err_out;
     }
 
-    chrdev_device->device = device_create(chrdev->class, NULL, chrdev_device->cdev.dev, NULL, "%s%d", THIS_MODULE->name, i);
+    chrdev_device->device = device_create(chrdev->class, NULL, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, i);
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
@@ -85,7 +86,7 @@ err_out:
 }
 
 static
-struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
+struct chrdev* chrdev_alloc(const char* name, int count, struct file_operations* fops) {
     long error = 0;
     struct chrdev* chrdev = NULL;
 
@@ -99,16 +100,18 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
         pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
+
+    strlcpy(chrdev->name, name, sizeof(chrdev->name));
     chrdev->count = count;
 
-    error = alloc_chrdev_region(&chrdev->dev, 0, count, THIS_MODULE->name);
+    error = alloc_chrdev_region(&chrdev->dev, 0, chrdev->count, chrdev->name);
     if(error) {
         chrdev->dev = 0;
         pr_err("[%s/%s] alloc_chrdev_region: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 
-    chrdev->class = class_create(THIS_MODULE, THIS_MODULE->name);
+    chrdev->class = class_create(THIS_MODULE, chrdev->name);
     if(IS_ERR_OR_NULL(chrdev->class)) {
         error = PTR_ERR(chrdev->class);
         chrdev->class = NULL;
@@ -116,7 +119,7 @@ struct chrdev* chrdev_alloc(int count, struct file_operations* fops) {
         goto err_out;
     }
 
-    for(int i = 0; i < count; i++) {
+    for(int i = 0; i < chrdev->count; i++) {
         struct chrdev_device* device = &chrdev->devices[i];
 
         cdev_init(&device->cdev, fops);

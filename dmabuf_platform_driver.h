@@ -30,7 +30,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    chrdev = chrdev_alloc(2, &dmabuf_chrdev_fops);
+    chrdev = chrdev_alloc(THIS_MODULE->name, 2, &dmabuf_chrdev_fops);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
