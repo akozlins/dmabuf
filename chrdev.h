@@ -11,8 +11,8 @@ struct chrdev_device {
 
 struct chrdev {
     char name[64];
-    dev_t dev;
     struct class* class;
+    dev_t dev;
     int count;
     struct chrdev_device devices[];
 };
@@ -44,13 +44,14 @@ void chrdev_free(struct chrdev* chrdev) {
         chrdev_device_del(chrdev, i);
     }
 
-    if(chrdev->class != NULL) {
-        class_destroy(chrdev->class);
-        chrdev->class = NULL;
-    }
     if(chrdev->dev != 0) {
         unregister_chrdev_region(chrdev->dev, 1);
         chrdev->dev = 0;
+    }
+
+    if(chrdev->class != NULL) {
+        class_destroy(chrdev->class);
+        chrdev->class = NULL;
     }
 
     kfree(chrdev);
@@ -102,14 +103,6 @@ struct chrdev* chrdev_alloc(const char* name, int count, struct file_operations*
     }
 
     strlcpy(chrdev->name, name, sizeof(chrdev->name));
-    chrdev->count = count;
-
-    error = alloc_chrdev_region(&chrdev->dev, 0, chrdev->count, chrdev->name);
-    if(error) {
-        chrdev->dev = 0;
-        pr_err("[%s/%s] alloc_chrdev_region: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
-        goto err_out;
-    }
 
     chrdev->class = class_create(THIS_MODULE, chrdev->name);
     if(IS_ERR_OR_NULL(chrdev->class)) {
@@ -118,6 +111,15 @@ struct chrdev* chrdev_alloc(const char* name, int count, struct file_operations*
         pr_err("[%s/%s] class_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
+
+    error = alloc_chrdev_region(&chrdev->dev, 0, count, chrdev->name);
+    if(error) {
+        chrdev->dev = 0;
+        pr_err("[%s/%s] alloc_chrdev_region: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        goto err_out;
+    }
+
+    chrdev->count = count;
 
     for(int i = 0; i < chrdev->count; i++) {
         struct chrdev_device* device = &chrdev->devices[i];
