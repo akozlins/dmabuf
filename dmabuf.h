@@ -13,7 +13,7 @@ static
 void dmabuf_free(struct dmabuf* dmabuf) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    if(dmabuf == NULL) return;
+    if(IS_ERR_OR_NULL(dmabuf)) return;
 
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
         pr_info("[%s/%s] dma_free_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);

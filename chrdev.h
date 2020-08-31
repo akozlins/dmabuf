@@ -19,11 +19,15 @@ struct chrdev {
 
 static
 void chrdev_device_del(struct chrdev* chrdev, int i) {
-    struct chrdev_device* chrdev_device = &chrdev->devices[i];
+    struct chrdev_device* chrdev_device;
 
     pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
 
-    if(chrdev_device->device != NULL) {
+    if(IS_ERR_OR_NULL(chrdev)) return;
+
+    chrdev_device = &chrdev->devices[i];
+
+    if(!IS_ERR_OR_NULL(chrdev_device->device)) {
         device_destroy(chrdev->class, chrdev_device->cdev.dev);
         chrdev_device->device = NULL;
     }
@@ -38,7 +42,7 @@ static
 void chrdev_free(struct chrdev* chrdev) {
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    if(chrdev == NULL) return;
+    if(IS_ERR_OR_NULL(chrdev)) return;
 
     for(int i = 0; i < chrdev->count; i++) {
         chrdev_device_del(chrdev, i);
@@ -49,7 +53,7 @@ void chrdev_free(struct chrdev* chrdev) {
         chrdev->dev = 0;
     }
 
-    if(chrdev->class != NULL) {
+    if(!IS_ERR_OR_NULL(chrdev->class)) {
         class_destroy(chrdev->class);
         chrdev->class = NULL;
     }
