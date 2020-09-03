@@ -44,7 +44,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
         dmabuf[i].dev = dev;
         dmabuf[i].size = 1024 << PAGE_SHIFT;
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dmabuf[i].cpu_addr = dma_alloc_coherent(dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
+        dmabuf[i].cpu_addr = dma_alloc_coherent(dmabuf[i].dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(dmabuf[i].cpu_addr)) {
             error = PTR_ERR(dmabuf[i].cpu_addr);
             if(error == 0) error = -ENOMEM;
@@ -85,7 +85,7 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
 
     if(dmabuf == NULL) {
         pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
-        return 0;
+        return -EFAULT;
     }
 
     size = dmabuf_size(dmabuf);
@@ -110,7 +110,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     if(dmabuf == NULL) {
         pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
-        return -ENOMEM;
+        return -EFAULT;
     }
 
     pr_info("  vm_start = %lx\n", vma->vm_start);
@@ -136,7 +136,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
             dmabuf[i].size, vma->vm_page_prot
         );
         if(error) {
-            pr_err("[%s/%s] remap_pfn_range: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+            pr_err("[%s/%s] remap_pfn_range: i = %d, error = %d\n", THIS_MODULE->name, __FUNCTION__, i, error);
             break;
         }
         offset += dmabuf[i].size;
@@ -151,7 +151,7 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size
 
     if(dmabuf == NULL) {
         pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
-        return -ENOMEM;
+        return -EFAULT;
     }
 
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
@@ -184,7 +184,7 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
 
     if(dmabuf == NULL) {
         pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
-        return -ENOMEM;
+        return -EFAULT;
     }
 
     for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {

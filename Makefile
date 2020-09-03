@@ -1,7 +1,7 @@
 
 MODULE_NAME := dmabuf
 
-KDIR = /lib/modules/`uname -r`/build
+KDIR := /lib/modules/`uname -r`/build
 
 all : .cache
 	$(MAKE) -C $(KDIR) modules M=$(PWD)/.cache src=$(PWD) -E "MODULE_NAME := $(MODULE_NAME)"
