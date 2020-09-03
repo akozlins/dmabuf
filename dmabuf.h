@@ -26,8 +26,8 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 
 static
 struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
-    long error = 0;
-    struct dmabuf* dmabuf = NULL;
+    long error;
+    struct dmabuf* dmabuf;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
@@ -66,11 +66,16 @@ err_out:
 static
 size_t dmabuf_size(struct dmabuf* dmabuf) {
     size_t size = 0;
-    if(dmabuf != NULL) {
-        for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
-            size += dmabuf[i].size;
-        }
+
+    if(dmabuf == NULL) {
+        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
+        return 0;
     }
+
+    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
+        size += dmabuf[i].size;
+    }
+
     return size;
 }
 
@@ -80,6 +85,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     size_t offset = 0;
 
     if(dmabuf == NULL) {
+        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
         return -ENOMEM;
     }
 

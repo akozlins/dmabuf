@@ -15,3 +15,4 @@ rmmod :
 
 .cache :
 	mkdir -p .cache
+	cp Kbuild .cache/

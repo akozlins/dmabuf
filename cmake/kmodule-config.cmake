@@ -32,7 +32,7 @@ set(KMODULE_COMPILE_DEFINITIONS
     -DMODULE
 )
 
-macro(add_kmodule TARGET_NAME)
+function(add_kmodule TARGET_NAME)
 
     add_custom_command(OUTPUT ${TARGET_NAME}.ko
         COMMAND
@@ -71,4 +71,4 @@ macro(add_kmodule TARGET_NAME)
         -DKBUILD_MODNAME="${TARGET_NAME}"
     )
 
-endmacro()
+endfunction()

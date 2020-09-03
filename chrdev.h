@@ -24,6 +24,7 @@ void chrdev_device_del(struct chrdev* chrdev, int i) {
     pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
 
     if(IS_ERR_OR_NULL(chrdev)) return;
+    if(!(0 <= i && i < chrdev->count)) return;
 
     chrdev_device = &chrdev->devices[i];
 
@@ -63,15 +64,20 @@ void chrdev_free(struct chrdev* chrdev) {
 
 static
 int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
-    long error = 0;
-    struct chrdev_device* chrdev_device = &chrdev->devices[i];
+    int error;
+    struct chrdev_device* chrdev_device;
 
     pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
+
+    if(IS_ERR_OR_NULL(chrdev)) return -EINVAL;
+    if(!(0 <= i && i < chrdev->count)) return -EINVAL;
+
+    chrdev_device = &chrdev->devices[i];
 
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
         chrdev_device->cdev.count = 0;
-        pr_err("[%s/%s] cdev_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] cdev_add: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 
@@ -79,7 +85,7 @@ int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
-        pr_err("[%s/%s] device_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        pr_err("[%s/%s] device_create: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
         goto err_out;
     }
 
@@ -92,8 +98,8 @@ err_out:
 
 static
 struct chrdev* chrdev_alloc(const char* name, int count, const struct file_operations* fops) {
-    long error = 0;
-    struct chrdev* chrdev = NULL;
+    long error;
+    struct chrdev* chrdev;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
