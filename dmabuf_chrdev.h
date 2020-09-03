@@ -73,7 +73,7 @@ int dmabuf_chrdev_release(struct inode* inode, struct file* file) {
     return 0;
 }
 
-static
+static const
 struct file_operations dmabuf_chrdev_fops = {
     .owner = THIS_MODULE,
     .llseek = dmabuf_chrdev_llseek,

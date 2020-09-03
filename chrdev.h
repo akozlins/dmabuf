@@ -62,7 +62,7 @@ void chrdev_free(struct chrdev* chrdev) {
 }
 
 static
-int chrdev_device_add(struct chrdev* chrdev, int i) {
+int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
     long error = 0;
     struct chrdev_device* chrdev_device = &chrdev->devices[i];
 
@@ -75,7 +75,7 @@ int chrdev_device_add(struct chrdev* chrdev, int i) {
         goto err_out;
     }
 
-    chrdev_device->device = device_create(chrdev->class, NULL, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, i);
+    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, i);
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
@@ -91,7 +91,7 @@ err_out:
 }
 
 static
-struct chrdev* chrdev_alloc(const char* name, int count, struct file_operations* fops) {
+struct chrdev* chrdev_alloc(const char* name, int count, const struct file_operations* fops) {
     long error = 0;
     struct chrdev* chrdev = NULL;
 

@@ -55,7 +55,7 @@ macro(add_kmodule TARGET_NAME)
     )
 
     add_custom_target(${TARGET_NAME}-rmmod
-        COMMAND sudo rmmod ${TARGET_NAME}
+        COMMAND sudo rmmod ${TARGET_NAME} || true
         VERBATIM
     )
 

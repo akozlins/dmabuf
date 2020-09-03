@@ -48,7 +48,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         }
         chrdev->devices[i].private_data = dmabuf;
 
-        error = chrdev_device_add(chrdev, i);
+        error = chrdev_device_add(chrdev, i, &pdev->dev);
         if(error) {
             goto err_out;
         }
