@@ -5,19 +5,7 @@
 static
 loff_t dmabuf_chrdev_llseek(struct file* file, loff_t loff, int whence) {
     struct dmabuf* dmabuf = file->private_data;
-    size_t size = dmabuf_size(dmabuf);
-
-    if(whence == SEEK_END && 0 <= -loff && -loff <= size) {
-        file->f_pos = size + loff;
-        return file->f_pos;
-    }
-
-    if(whence == SEEK_SET && 0 <= loff && loff <= size) {
-        file->f_pos = loff;
-        return file->f_pos;
-    }
-
-    return -EINVAL;
+    return dmabuf_llseek(dmabuf, file, loff, whence);
 }
 
 static

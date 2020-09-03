@@ -80,6 +80,30 @@ size_t dmabuf_size(struct dmabuf* dmabuf) {
 }
 
 static
+loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int whence) {
+    size_t size;
+
+    if(dmabuf == NULL) {
+        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
+        return 0;
+    }
+
+    size = dmabuf_size(dmabuf);
+
+    if(whence == SEEK_END && 0 <= -loff && -loff <= size) {
+        file->f_pos = size + loff;
+        return file->f_pos;
+    }
+
+    if(whence == SEEK_SET && 0 <= loff && loff <= size) {
+        file->f_pos = loff;
+        return file->f_pos;
+    }
+
+    return -EINVAL;
+}
+
+static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error = 0;
     size_t offset = 0;
