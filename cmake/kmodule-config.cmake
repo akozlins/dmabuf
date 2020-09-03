@@ -38,6 +38,7 @@ function(add_kmodule TARGET_NAME)
         COMMAND
             $(MAKE) -C ${KMODULE_KDIR} clean modules
             M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
+            -E "MODULE_NAME := ${TARGET_NAME}"
             W=1
         VERBATIM
         DEPENDS Kbuild ${ARGN}

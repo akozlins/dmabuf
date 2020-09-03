@@ -1,11 +1,13 @@
 
+MODULE_NAME := dmabuf
+
 KDIR = /lib/modules/`uname -r`/build
 
 all : .cache
-	$(MAKE) -C $(KDIR) modules M=$(PWD)/.cache src=$(PWD)
+	$(MAKE) -C $(KDIR) modules M=$(PWD)/.cache src=$(PWD) -E "MODULE_NAME := $(MODULE_NAME)"
 
 clean : .cache
-	$(MAKE) -C $(KDIR) clean M=$(PWD)/.cache src=$(PWD)
+	$(MAKE) -C $(KDIR) clean M=$(PWD)/.cache src=$(PWD) -E "MODULE_NAME := $(MODULE_NAME)"
 
 insmod : | all rmmod
 	sudo insmod .cache/$(MODULE_NAME).ko

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.18)
 project(dmabuf LANGUAGES C CXX)
 
 file(GLOB MODULE_SOURCES
-    ${PROJECT_NAME}.c
+    kmodule.c
     *.h
 )
 
