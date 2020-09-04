@@ -103,7 +103,7 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    chrdev = kzalloc(sizeof(struct chrdev) + count * sizeof(struct chrdev_device), GFP_KERNEL);
+    chrdev = kzalloc(sizeof(*chrdev) + count * sizeof(chrdev->devices[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         if(error == 0) error = -ENOMEM;

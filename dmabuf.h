@@ -41,7 +41,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int size) {
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    dmabuf = kzalloc(sizeof(struct dmabuf) + count * sizeof(struct dmabuf_entry), GFP_KERNEL);
+    dmabuf = kzalloc(sizeof(*dmabuf) + count * sizeof(dmabuf->entries[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         if(error == 0) error = -ENOMEM;
