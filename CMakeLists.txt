@@ -16,7 +16,7 @@ add_kmodule(dmabuf
 add_dependencies(dmabuf-insmod dmabuf-rmmod)
 
 add_custom_target(insmod
-    COMMAND sudo chmod a+rw /dev/dmabuf*
+    COMMAND sudo chmod a+rw /dev/dmabuf0
     VERBATIM
     DEPENDS dmabuf-insmod
 )
