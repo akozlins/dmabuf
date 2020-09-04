@@ -2,11 +2,16 @@
 #include <linux/dma-direct.h>
 #include <linux/slab.h>
 
-struct dmabuf {
-    struct device* dev;
+struct dmabuf_entry {
     size_t size;
     void* cpu_addr;
     dma_addr_t dma_addr;
+};
+
+struct dmabuf {
+    struct device* dev;
+    int count;
+    struct dmabuf_entry entries[];
 };
 
 static
@@ -15,23 +20,28 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 
     if(IS_ERR_OR_NULL(dmabuf)) return;
 
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
+    for(int i = 0; i < dmabuf->count; i++) {
+        struct dmabuf_entry* entry = &dmabuf->entries[i];
+        if(entry->size == 0) continue;
+
         pr_info("[%s/%s] dma_free_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dma_free_coherent(dmabuf[i].dev, dmabuf[i].size, dmabuf[i].cpu_addr, dmabuf[i].dma_addr);
-        dmabuf[i].cpu_addr = NULL;
+        dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_addr);
+        entry->size = 0;
     }
 
     kfree(dmabuf);
 }
 
 static
-struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
+struct dmabuf* dmabuf_alloc(struct device* dev, int size) {
     long error;
     struct dmabuf* dmabuf;
+    int entry_size = 1 << (10 + PAGE_SHIFT);
+    int count = ALIGN(size, entry_size) / entry_size;
 
     pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
 
-    dmabuf = kzalloc((n + 1) * sizeof(struct dmabuf), GFP_KERNEL);
+    dmabuf = kzalloc(sizeof(struct dmabuf) + count * sizeof(struct dmabuf_entry), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         if(error == 0) error = -ENOMEM;
@@ -40,18 +50,23 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int n) {
         goto err_out;
     }
 
-    for(int i = 0; i < n; i++) {
-        dmabuf[i].dev = dev;
-        dmabuf[i].size = 1024 << PAGE_SHIFT;
+    dmabuf->dev = dev;
+    dmabuf->count = count;
+
+    for(int i = 0; i < dmabuf->count; i++) {
+        struct dmabuf_entry* entry = &dmabuf->entries[i];
+
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dmabuf[i].cpu_addr = dma_alloc_coherent(dmabuf[i].dev, dmabuf[i].size, &dmabuf[i].dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
-        if(IS_ERR_OR_NULL(dmabuf[i].cpu_addr)) {
-            error = PTR_ERR(dmabuf[i].cpu_addr);
+        entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry_size, &entry->dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
+        if(IS_ERR_OR_NULL(entry->cpu_addr)) {
+            error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
-            dmabuf[i].cpu_addr = NULL;
             pr_err("[%s/%s] dma_alloc_coherent: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
             goto err_out;
         }
+
+        entry->size = entry_size;
+
         pr_info("  cpu_addr = %px\n", dmabuf[i].cpu_addr);
         pr_info("  dma_addr = %llx\n", dmabuf[i].dma_addr);
     }
@@ -72,8 +87,8 @@ size_t dmabuf_size(struct dmabuf* dmabuf) {
         return 0;
     }
 
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
-        size += dmabuf[i].size;
+    for(int i = 0; i < dmabuf->count; i++) {
+        size += dmabuf->entries[i].size;
     }
 
     return size;
@@ -128,18 +143,22 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++) {
+    for(int i = 0; i < dmabuf->count; i++) {
+        struct dmabuf_entry* entry = &dmabuf->entries[i];
+        if(entry->size == 0) continue;
+
         pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         error = remap_pfn_range(vma,
             vma->vm_start + offset,
-            PHYS_PFN(dma_to_phys(dmabuf[i].dev, dmabuf[i].dma_addr)), // see `dma_direct_mmap`
-            dmabuf[i].size, vma->vm_page_prot
+            PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_addr)), // see `dma_direct_mmap`
+            entry->size, vma->vm_page_prot
         );
         if(error) {
             pr_err("[%s/%s] remap_pfn_range: i = %d, error = %d\n", THIS_MODULE->name, __FUNCTION__, i, error);
             break;
         }
-        offset += dmabuf[i].size;
+
+        offset += entry->size;
     }
 
     return error;
@@ -154,16 +173,18 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size
         return -EFAULT;
     }
 
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
+    for(int i = 0; i < dmabuf->count; i++, offset -= dmabuf->entries[i].size) {
         size_t k;
+        struct dmabuf_entry* entry = &dmabuf->entries[i];
+        if(entry->size == 0) continue;
 
-        if(offset > dmabuf[i].size) continue;
+        if(offset >= entry->size) continue;
 
-        k = dmabuf[i].size - offset;
+        k = entry->size - offset;
         if(k > size) k = size;
 
         pr_info("[%s/%s] copy_to_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
-        if(copy_to_user(user_buffer, dmabuf[i].cpu_addr + offset, k)) {
+        if(copy_to_user(user_buffer, entry->cpu_addr + offset, k)) {
             pr_err("[%s/%s] copy_to_user != 0\n", THIS_MODULE->name, __FUNCTION__);
             return -EFAULT;
         }
@@ -187,16 +208,18 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
         return -EFAULT;
     }
 
-    for(int i = 0; dmabuf[i].cpu_addr != NULL; i++, offset -= dmabuf[i].size) {
+    for(int i = 0; i < dmabuf->count; i++, offset -= dmabuf->entries[i].size) {
         size_t k;
+        struct dmabuf_entry* entry = &dmabuf->entries[i];
+        if(entry->size == 0) continue;
 
-        if(offset > dmabuf[i].size) continue;
+        if(offset >= entry->size) continue;
 
-        k = dmabuf[i].size - offset;
+        k = entry->size - offset;
         if(k > size) k = size;
 
         pr_info("[%s/%s] copy_from_user(dmabuf[%d], ..., 0x%lx)\n", THIS_MODULE->name, __FUNCTION__, i, k);
-        if(copy_from_user(dmabuf[i].cpu_addr + offset, user_buffer, k)) {
+        if(copy_from_user(entry->cpu_addr + offset, user_buffer, k)) {
             pr_err("[%s/%s] copy_from_user != 0\n", THIS_MODULE->name, __FUNCTION__);
             return -EFAULT;
         }

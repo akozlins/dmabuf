@@ -40,7 +40,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     platform_set_drvdata(pdev, chrdev);
 
     for(int i = 0; i < chrdev->count; i++) {
-        struct dmabuf* dmabuf = dmabuf_alloc(&pdev->dev, 256); // 1 GB
+        struct dmabuf* dmabuf = dmabuf_alloc(&pdev->dev, 256 * 1024 * 1024);
         if(IS_ERR_OR_NULL(dmabuf)) {
             error = PTR_ERR(dmabuf);
             dmabuf = NULL;
