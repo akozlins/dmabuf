@@ -9,7 +9,17 @@ file(GLOB MODULE_SOURCES
 
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(kmodule REQUIRED)
-add_kmodule(${PROJECT_NAME} ${MODULE_SOURCES})
+add_kmodule(dmabuf
+    NAME dmabuf
+    ${MODULE_SOURCES}
+)
+add_dependencies(dmabuf-insmod dmabuf-rmmod)
+
+add_custom_target(insmod
+    COMMAND sudo chmod a+rw /dev/dmabuf*
+    VERBATIM
+    DEPENDS dmabuf-insmod
+)
 
 
 

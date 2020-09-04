@@ -34,42 +34,54 @@ set(KMODULE_COMPILE_DEFINITIONS
 
 function(add_kmodule TARGET_NAME)
 
-    add_custom_command(OUTPUT ${TARGET_NAME}.ko
+    cmake_parse_arguments(PARSE_ARGV 1 MODULE
+        ""
+        "NAME"
+        "SOURCES"
+    )
+    if(NOT MODULE_NAME)
+        set(MODULE_NAME ${TARGET_NAME})
+    endif()
+    if(NOT MODULE_SOURCES)
+        set(MODULE_SOURCES ${MODULE_UNPARSED_ARGUMENTS})
+    endif()
+
+    add_custom_command(OUTPUT ${MODULE_NAME}.ko
         COMMAND
             $(MAKE) -C ${KMODULE_KDIR} clean modules
             M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
             -E "MODULE_NAME := ${TARGET_NAME}"
             W=1
         VERBATIM
-        DEPENDS Kbuild ${ARGN}
+        DEPENDS Kbuild ${MODULE_SOURCES}
     )
 
     add_custom_target(${TARGET_NAME}
         ALL
-        DEPENDS ${TARGET_NAME}.ko
+        DEPENDS ${MODULE_NAME}.ko
     )
 
     add_custom_target(${TARGET_NAME}-insmod
-        COMMAND sudo insmod ${TARGET_NAME}.ko
+        COMMAND sudo insmod ${MODULE_NAME}.ko
         VERBATIM
-        DEPENDS ${TARGET_NAME}.ko
+        DEPENDS ${MODULE_NAME}.ko
     )
 
     add_custom_target(${TARGET_NAME}-rmmod
-        COMMAND sudo rmmod ${TARGET_NAME} || true
+        COMMAND sudo rmmod ${MODULE_NAME} || true
         VERBATIM
     )
 
     add_library(${TARGET_NAME}-ide MODULE EXCLUDE_FROM_ALL
-        ${ARGN}
+        ${MODULE_SOURCES}
     )
     target_include_directories(${TARGET_NAME}-ide SYSTEM PRIVATE
         ${KMODULE_INCLUDE_DIRECTORIES}
     )
     target_compile_options(${TARGET_NAME}-ide PRIVATE
         ${KMODULE_COMPILE_DEFINITIONS}
-        -DKBUILD_BASENAME="${TARGET_NAME}"
-        -DKBUILD_MODNAME="${TARGET_NAME}"
+        -DKBUILD_BASENAME="${MODULE_NAME}"
+        -DKBUILD_MODNAME="${MODULE_NAME}"
     )
 
 endfunction()
