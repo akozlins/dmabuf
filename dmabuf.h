@@ -10,6 +10,7 @@ struct dmabuf_entry {
 
 struct dmabuf {
     struct device* dev;
+    size_t size;
     int count;
     struct dmabuf_entry entries[];
 };
@@ -66,6 +67,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int size) {
         }
 
         entry->size = entry_size;
+        dmabuf->size += entry->size;
 
         pr_info("  cpu_addr = %px\n", dmabuf[i].cpu_addr);
         pr_info("  dma_addr = %llx\n", dmabuf[i].dma_addr);
@@ -79,38 +81,18 @@ err_out:
 }
 
 static
-size_t dmabuf_size(struct dmabuf* dmabuf) {
-    size_t size = 0;
-
-    if(dmabuf == NULL) {
-        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
-        return 0;
-    }
-
-    for(int i = 0; i < dmabuf->count; i++) {
-        size += dmabuf->entries[i].size;
-    }
-
-    return size;
-}
-
-static
 loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int whence) {
-    size_t size;
-
     if(dmabuf == NULL) {
         pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
         return -EFAULT;
     }
 
-    size = dmabuf_size(dmabuf);
-
-    if(whence == SEEK_END && 0 <= -loff && -loff <= size) {
-        file->f_pos = size + loff;
+    if(whence == SEEK_END && 0 <= -loff && -loff <= dmabuf->size) {
+        file->f_pos = dmabuf->size + loff;
         return file->f_pos;
     }
 
-    if(whence == SEEK_SET && 0 <= loff && loff <= size) {
+    if(whence == SEEK_SET && 0 <= loff && loff <= dmabuf->size) {
         file->f_pos = loff;
         return file->f_pos;
     }
@@ -132,7 +114,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     pr_info("  vm_end = %lx\n", vma->vm_end);
     pr_info("  vm_pgoff = %lx\n", vma->vm_pgoff);
 
-    if(vma_pages(vma) != PAGE_ALIGN(dmabuf_size(dmabuf)) >> PAGE_SHIFT) {
+    if(vma_pages(vma) != PAGE_ALIGN(dmabuf->size) >> PAGE_SHIFT) {
         return -EINVAL;
     }
     if(vma->vm_pgoff != 0) {
