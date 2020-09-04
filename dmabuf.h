@@ -5,7 +5,7 @@
 struct dmabuf_entry {
     size_t size;
     void* cpu_addr;
-    dma_addr_t dma_addr;
+    dma_addr_t dma_handle;
 };
 
 struct dmabuf {
@@ -25,7 +25,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
         if(entry->size == 0) continue;
 
         pr_info("[%s/%s] dma_free_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_addr);
+        dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
         entry->size = 0;
     }
 
@@ -57,7 +57,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int size) {
         struct dmabuf_entry* entry = &dmabuf->entries[i];
 
         pr_info("[%s/%s] dma_alloc_coherent: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
-        entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry_size, &entry->dma_addr, GFP_ATOMIC); // see `pci_alloc_consistent`
+        entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry_size, &entry->dma_handle, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(entry->cpu_addr)) {
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
@@ -150,7 +150,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         pr_info("[%s/%s] remap_pfn_range: i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
         error = remap_pfn_range(vma,
             vma->vm_start + offset,
-            PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_addr)), // see `dma_direct_mmap`
+            PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)), // see `dma_direct_mmap`
             entry->size, vma->vm_page_prot
         );
         if(error) {
