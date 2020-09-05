@@ -105,11 +105,12 @@ retry:
     // report contiguous DMA handles
     dmabuf_entry_for_each(entry, &dmabuf->entries) {
         dma_addr_t dma_handle = entry->dma_handle;
-        size_t dma_size = 0;
-        while(dma_handle + dma_size == entry->dma_handle) {
-            dma_size += entry->size;
-            if(list_is_last(&entry->list_head, &dmabuf->entries)) break;
-            entry = list_next_entry(entry, list_head);
+        size_t dma_size = entry->size;
+        while(!list_is_last(&entry->list_head, &dmabuf->entries)) {
+            struct dmabuf_entry* next = list_next_entry(entry, list_head);
+            if(dma_handle + dma_size != next->dma_handle) break;
+            dma_size += next->size;
+            entry = next;
         }
         M_INFO("dma_handle = 0x%llx, dma_size = 0x%lx", dma_handle, dma_size);
     }
