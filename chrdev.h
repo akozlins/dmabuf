@@ -1,4 +1,6 @@
 
+#include "kmodule.h"
+
 #include <linux/cdev.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
@@ -21,7 +23,7 @@ static
 void chrdev_device_del(struct chrdev* chrdev, int i) {
     struct chrdev_device* chrdev_device;
 
-    pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
+    M_INFO("i = %d\n", i);
 
     if(IS_ERR_OR_NULL(chrdev)) return;
     if(!(0 <= i && i < chrdev->count)) return;
@@ -41,7 +43,7 @@ void chrdev_device_del(struct chrdev* chrdev, int i) {
 
 static
 void chrdev_free(struct chrdev* chrdev) {
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     if(IS_ERR_OR_NULL(chrdev)) return;
 
@@ -67,7 +69,7 @@ int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
     int error;
     struct chrdev_device* chrdev_device;
 
-    pr_info("[%s/%s] i = %d\n", THIS_MODULE->name, __FUNCTION__, i);
+    M_INFO("i = %d\n", i);
 
     if(IS_ERR_OR_NULL(chrdev)) return -EINVAL;
     if(!(0 <= i && i < chrdev->count)) return -EINVAL;
@@ -77,7 +79,7 @@ int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
         chrdev_device->cdev.count = 0;
-        pr_err("[%s/%s] cdev_add: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("cdev_add: error = %d\n", error);
         goto err_out;
     }
 
@@ -85,7 +87,7 @@ int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
-        pr_err("[%s/%s] device_create: error = %d\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("device_create: error = %d\n", error);
         goto err_out;
     }
 
@@ -101,14 +103,14 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
     long error;
     struct chrdev* chrdev;
 
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("name = %s, count = %d\n", name, count);
 
     chrdev = kzalloc(sizeof(*chrdev) + count * sizeof(chrdev->devices[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         if(error == 0) error = -ENOMEM;
         chrdev = NULL;
-        pr_err("[%s/%s] kzalloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("kzalloc: error = %ld\n", error);
         goto err_out;
     }
 
@@ -118,14 +120,14 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
     if(IS_ERR_OR_NULL(chrdev->class)) {
         error = PTR_ERR(chrdev->class);
         chrdev->class = NULL;
-        pr_err("[%s/%s] class_create: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("class_create: error = %ld\n", error);
         goto err_out;
     }
 
     error = alloc_chrdev_region(&chrdev->dev, 0, count, chrdev->name);
     if(error) {
         chrdev->dev = 0;
-        pr_err("[%s/%s] alloc_chrdev_region: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("alloc_chrdev_region: error = %ld\n", error);
         goto err_out;
     }
 

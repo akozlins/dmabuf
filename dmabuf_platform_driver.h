@@ -22,11 +22,11 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     long error = 0;
     struct chrdev* chrdev = NULL;
 
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
     if(error) {
-        pr_err("[%s/%s] dma_set_mask_and_coherent: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("dma_set_mask_and_coherent: error = %ld\n", error);
         goto err_out;
     }
 
@@ -34,7 +34,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
-        pr_err("[%s/%s] chrdev_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("chrdev_alloc: error = %ld\n", error);
         goto err_out;
     }
     platform_set_drvdata(pdev, chrdev);
@@ -63,7 +63,7 @@ err_out:
 
 static
 int dmabuf_platform_driver_remove(struct platform_device* pdev) {
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     dmabuf_platform_driver_cleanup(pdev);
 

@@ -35,17 +35,17 @@ int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
     struct chrdev_device* chrdev_device;
     struct dmabuf* dmabuf;
 
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     chrdev_device = container_of(inode->i_cdev, struct chrdev_device, cdev);
     if(chrdev_device == NULL) {
-        pr_err("[%s/%s] chrdev_device == NULL\n", THIS_MODULE->name, __FUNCTION__);
+        M_ERR("chrdev_device == NULL\n");
         return -ENODEV;
     }
 
     dmabuf = chrdev_device->private_data;
     if(dmabuf == NULL) {
-        pr_err("[%s/%s] dmabuf == NULL\n", THIS_MODULE->name, __FUNCTION__);
+        M_ERR("dmabuf == NULL\n");
         return -ENODEV;
     }
 
@@ -56,7 +56,7 @@ int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
 
 static
 int dmabuf_chrdev_release(struct inode* inode, struct file* file) {
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     return 0;
 }

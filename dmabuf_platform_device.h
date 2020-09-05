@@ -1,4 +1,6 @@
 
+#include "kmodule.h"
+
 #include <linux/platform_device.h>
 
 static
@@ -12,13 +14,13 @@ struct platform_device* dmabuf_platform_device_register(const char* name) {
     if(IS_ERR_OR_NULL(pdev)) {
         error = PTR_ERR(pdev);
         pdev = NULL;
-        pr_err("[%s/%s] platform_device_alloc: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("platform_device_alloc: error = %ld\n", error);
         goto err_out;
     }
 
     error = platform_device_add(pdev);
     if(error) {
-        pr_err("[%s/%s] platform_device_add: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("platform_device_add: error = %ld\n", error);
         goto err_pdev_put;
     }
 

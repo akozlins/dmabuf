@@ -13,11 +13,11 @@ static
 int __init dmabuf_module_init(void) {
     long error = 0;
 
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     error = platform_driver_register(&dmabuf_platform_driver);
     if(error) {
-        pr_err("[%s/%s] platform_driver_register: error = %ld\n", THIS_MODULE->name, __FUNCTION__, error);
+        M_ERR("platform_driver_register: error = %ld\n", error);
     }
 
     dmabuf_platform_device = dmabuf_platform_device_register(THIS_MODULE->name);
@@ -32,7 +32,7 @@ int __init dmabuf_module_init(void) {
 
 static
 void __exit dmabuf_module_exit(void) {
-    pr_info("[%s/%s]\n", THIS_MODULE->name, __FUNCTION__);
+    M_INFO("\n");
 
     platform_device_unregister(dmabuf_platform_device);
     platform_driver_unregister(&dmabuf_platform_driver);
