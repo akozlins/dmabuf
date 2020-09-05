@@ -7,16 +7,17 @@ struct dmabuf_entry {
     size_t size;
     void* cpu_addr;
     dma_addr_t dma_handle;
+    struct list_head list_head;
 };
 
 #define dmabuf_entry_for_each(pos, head) \
-    for(struct dmabuf_entry* pos = &(*head)[0]; pos->size != 0; pos++)
+    for(struct dmabuf_entry* pos = NULL; pos == NULL; pos = ERR_PTR(-EINVAL)) \
+    list_for_each_entry(pos, head, list_head)
 
 struct dmabuf {
     struct device* dev;
     size_t size;
-    int count;
-    struct dmabuf_entry entries[];
+    struct list_head entries;
 };
 
 static
@@ -28,6 +29,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
     dmabuf_entry_for_each(entry, &dmabuf->entries) {
         M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%lx)\n", entry->dma_handle, entry->size);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
+        kfree(entry);
     }
 
     kfree(dmabuf);
@@ -37,7 +39,6 @@ static
 struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     int error;
     size_t entry_size = PAGE_SIZE << 10;
-    int count = ALIGN(size, entry_size) / entry_size;
     struct dmabuf* dmabuf = NULL;
 
     M_INFO("size = 0x%lx\n", size);
@@ -47,7 +48,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
         goto err_out;
     }
 
-    dmabuf = kzalloc(sizeof(*dmabuf) + count * sizeof(dmabuf->entries[0]), GFP_KERNEL);
+    dmabuf = kzalloc(sizeof(*dmabuf), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         if(error == 0) error = -ENOMEM;
@@ -56,10 +57,10 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     }
 
     dmabuf->dev = dev;
-    dmabuf->count = count;
+    INIT_LIST_HEAD(&dmabuf->entries);
 
-    for(int i = 0; i < dmabuf->count; i++) {
-        struct dmabuf_entry* entry = &dmabuf->entries[i];
+    while(dmabuf->size < size) {
+        struct dmabuf_entry* entry = kzalloc(sizeof(*entry), GFP_KERNEL);
         if(IS_ERR_OR_NULL(entry)) {
             error = PTR_ERR(entry);
             if(error == 0) error = -ENOMEM;
@@ -75,9 +76,12 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
             M_ERR("dma_alloc_coherent(size = 0x%lx): error = %d\n", entry->size, error);
-            entry->size = 0;
+            kfree(entry);
             goto err_out;
         }
+
+        INIT_LIST_HEAD(&entry->list_head);
+        list_add(&entry->list_head, &dmabuf->entries);
 
         dmabuf->size += entry->size;
     }
