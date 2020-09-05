@@ -20,15 +20,15 @@ struct chrdev {
 };
 
 static
-void chrdev_device_del(struct chrdev* chrdev, int i) {
+void chrdev_device_del(struct chrdev* chrdev, int minor) {
     struct chrdev_device* chrdev_device;
 
-    M_INFO("i = %d\n", i);
+    M_INFO("minor = %d\n", minor);
 
     if(IS_ERR_OR_NULL(chrdev)) return;
-    if(!(0 <= i && i < chrdev->count)) return;
+    if(!(0 <= minor && minor < chrdev->count)) return;
 
-    chrdev_device = &chrdev->devices[i];
+    chrdev_device = &chrdev->devices[minor];
 
     if(!IS_ERR_OR_NULL(chrdev_device->device)) {
         device_destroy(chrdev->class, chrdev_device->cdev.dev);
@@ -65,36 +65,36 @@ void chrdev_free(struct chrdev* chrdev) {
 }
 
 static
-int chrdev_device_add(struct chrdev* chrdev, int i, struct device* parent) {
+int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
     int error;
     struct chrdev_device* chrdev_device;
 
-    M_INFO("i = %d\n", i);
+    M_INFO("minor = %d\n", minor);
 
     if(IS_ERR_OR_NULL(chrdev)) return -EINVAL;
-    if(!(0 <= i && i < chrdev->count)) return -EINVAL;
+    if(!(0 <= minor && minor < chrdev->count)) return -EINVAL;
 
-    chrdev_device = &chrdev->devices[i];
+    chrdev_device = &chrdev->devices[minor];
 
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
         chrdev_device->cdev.count = 0;
-        M_ERR("cdev_add: error = %d\n", error);
+        M_ERR("cdev_add(minor = %d): error = %d\n", minor, error);
         goto err_out;
     }
 
-    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, i);
+    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, minor);
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
-        M_ERR("device_create: error = %d\n", error);
+        M_ERR("device_create(minor = %d): error = %d\n", minor, error);
         goto err_out;
     }
 
     return 0;
 
 err_out:
-    chrdev_device_del(chrdev, i);
+    chrdev_device_del(chrdev, minor);
     return error;
 }
 
@@ -103,7 +103,7 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
     int error;
     struct chrdev* chrdev;
 
-    M_INFO("name = %s, count = %d\n", name, count);
+    M_INFO("name = '%s', count = %d\n", name, count);
 
     chrdev = kzalloc(sizeof(*chrdev) + count * sizeof(chrdev->devices[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
@@ -120,14 +120,14 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
     if(IS_ERR_OR_NULL(chrdev->class)) {
         error = PTR_ERR(chrdev->class);
         chrdev->class = NULL;
-        M_ERR("class_create: error = %d\n", error);
+        M_ERR("class_create(name = '%s'): error = %d\n", name, error);
         goto err_out;
     }
 
     error = alloc_chrdev_region(&chrdev->dev, 0, count, chrdev->name);
     if(error) {
         chrdev->dev = 0;
-        M_ERR("alloc_chrdev_region: error = %d\n", error);
+        M_ERR("alloc_chrdev_region(count = %d, name = '%s'): error = %d\n", count, name, error);
         goto err_out;
     }
 
