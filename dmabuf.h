@@ -18,15 +18,17 @@ struct dmabuf {
 
 static
 void dmabuf_free(struct dmabuf* dmabuf) {
+    struct dmabuf_entry* entry;
+
     M_INFO("\n");
 
     if(IS_ERR_OR_NULL(dmabuf)) return;
 
     for(int i = 0; i < dmabuf->count; i++) {
-        struct dmabuf_entry* entry = &dmabuf->entries[i];
+        entry = &dmabuf->entries[i];
         if(entry->size == 0) continue;
 
-        M_DEBUG("dma_free_coherent: i = %d\n", i);
+        M_DEBUG("dma_free_coherent(dma_handle = 0x%llx))\n", entry->dma_handle);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
     }
 
@@ -37,8 +39,7 @@ static
 struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     int error;
     struct dmabuf* dmabuf;
-    size_t entry_size = 1 << (10 + PAGE_SHIFT);
-    int count = ALIGN(size, entry_size) / entry_size;
+    int count = ALIGN(size, PAGE_SIZE << 10) / (PAGE_SIZE << 10);
 
     M_INFO("size = 0x%lx\n", size);
 
@@ -57,16 +58,18 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     for(int i = 0; i < dmabuf->count; i++) {
         struct dmabuf_entry* entry = &dmabuf->entries[i];
 
-        M_DEBUG("dma_alloc_coherent: i = %d, size = 0x%lx\n", i, entry_size);
-        entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry_size, &entry->dma_handle, GFP_ATOMIC); // see `pci_alloc_consistent`
+        entry->size = PAGE_SIZE << 10;
+
+        M_DEBUG("dma_alloc_coherent(size = 0x%lx)\n", entry->size);
+        entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry->size, &entry->dma_handle, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(entry->cpu_addr)) {
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
             M_ERR("dma_alloc_coherent: error = %d\n", error);
+            entry->size = 0;
             goto err_out;
         }
 
-        entry->size = entry_size;
         dmabuf->size += entry->size;
     }
 
@@ -123,16 +126,16 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     for(int i = 0; i < dmabuf->count; i++) {
         struct dmabuf_entry* entry = &dmabuf->entries[i];
-        if(entry->size == 0) continue;
+        unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)); // see `dma_direct_mmap`
 
-        M_DEBUG("remap_pfn_range: i = %d\n", i);
+        M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, entry->size);
         error = remap_pfn_range(vma,
             vma->vm_start + offset,
-            PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)), // see `dma_direct_mmap`
+            pfn,
             entry->size, vma->vm_page_prot
         );
         if(error) {
-            M_ERR("remap_pfn_range: i = %d, error = %d\n", i, error);
+            M_ERR("remap_pfn_range: error = %d\n", error);
             break;
         }
 
@@ -145,21 +148,26 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 static
 ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size, loff_t offset) {
     ssize_t n = 0;
+    struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) {
         M_ERR("dmabuf == NULL\n");
         return -EFAULT;
     }
 
-    for(int i = 0; i < dmabuf->count && size > 0; i++, offset -= dmabuf->entries[i].size) {
+    for(int i = 0; i < dmabuf->count; i++) {
         size_t k;
-        struct dmabuf_entry* entry = &dmabuf->entries[i];
-        if(offset >= entry->size) continue;
+        entry = &dmabuf->entries[i];
+        if(size == 0) break;
+        if(offset >= entry->size) {
+            offset -= entry->size;
+            continue;
+        }
 
         k = entry->size - offset;
         if(k > size) k = size;
 
-        M_DEBUG("copy_to_user: i = %d, size = 0x%lx)\n", i, k);
+        M_DEBUG("copy_to_user(size = 0x%lx)\n", k);
         if(copy_to_user(user_buffer, entry->cpu_addr + offset, k)) {
             M_ERR("copy_to_user != 0\n");
             return -EFAULT;
@@ -167,7 +175,7 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size
         n += k;
         user_buffer += k;
         size -= k;
-        offset += k;
+        offset = 0;
     }
 
     return n;
@@ -176,21 +184,26 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t size
 static
 ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size_t size, loff_t offset) {
     ssize_t n = 0;
+    struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) {
         M_ERR("dmabuf == NULL\n");
         return -EFAULT;
     }
 
-    for(int i = 0; i < dmabuf->count && size > 0; i++, offset -= dmabuf->entries[i].size) {
+    for(int i = 0; i < dmabuf->count; i++) {
         size_t k;
-        struct dmabuf_entry* entry = &dmabuf->entries[i];
-        if(offset >= entry->size) continue;
+        entry = &dmabuf->entries[i];
+        if(size == 0) break;
+        if(offset >= entry->size) {
+            offset -= entry->size;
+            continue;
+        }
 
         k = entry->size - offset;
         if(k > size) k = size;
 
-        M_DEBUG("copy_from_user: i = %d, size = 0x%lx)\n", i, k);
+        M_DEBUG("copy_from_user(size = 0x%lx)\n", k);
         if(copy_from_user(entry->cpu_addr + offset, user_buffer, k)) {
             M_ERR("copy_from_user != 0\n");
             return -EFAULT;
@@ -198,7 +211,7 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
         n += k;
         user_buffer += k;
         size -= k;
-        offset += k;
+        offset = 0;
     }
 
     return n;
