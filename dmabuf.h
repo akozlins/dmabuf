@@ -20,6 +20,17 @@ struct dmabuf {
     struct list_head entries;
 };
 
+#include <linux/list_sort.h>
+
+static
+int dmabuf_entry_cmp(void* priv, struct list_head* a, struct list_head* b) {
+    dma_addr_t aa = container_of(a, struct dmabuf_entry, list_head)->dma_handle;
+    dma_addr_t bb = container_of(b, struct dmabuf_entry, list_head)->dma_handle;
+    if(aa < bb) return -1;
+    if(aa > bb) return +1;
+    return 0;
+}
+
 static
 void dmabuf_free(struct dmabuf* dmabuf) {
     M_INFO("\n");
@@ -84,6 +95,21 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
         list_add(&entry->list_head, &dmabuf->entries);
 
         dmabuf->size += entry->size;
+    }
+
+    // sort by dma_handle
+    list_sort(NULL, &dmabuf->entries, dmabuf_entry_cmp);
+
+    // report contiguous DMA handles
+    dmabuf_entry_for_each(entry, &dmabuf->entries) {
+        dma_addr_t dma_handle = entry->dma_handle;
+        size_t dma_size = 0;
+        while(dma_handle + dma_size == entry->dma_handle) {
+            dma_size += entry->size;
+            if(list_is_last(&entry->list_head, &dmabuf->entries)) break;
+            entry = list_next_entry(entry, list_head);
+        }
+        M_INFO("dma_handle = 0x%llx, dma_size = 0x%lx", dma_handle, dma_size);
     }
 
     return dmabuf;
