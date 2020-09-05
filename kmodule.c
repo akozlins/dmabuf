@@ -18,16 +18,20 @@ int __init dmabuf_module_init(void) {
     error = platform_driver_register(&dmabuf_platform_driver);
     if(error) {
         M_ERR("platform_driver_register: error = %ld\n", error);
+        goto err_out;
     }
 
     dmabuf_platform_device = dmabuf_platform_device_register(THIS_MODULE->name);
     if(IS_ERR_OR_NULL(dmabuf_platform_device)) {
         error = PTR_ERR(dmabuf_platform_device);
         dmabuf_platform_device = NULL;
-        return error;
+        goto err_out;
     }
 
     return 0;
+
+err_out:
+    return error;
 }
 
 static

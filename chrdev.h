@@ -52,7 +52,7 @@ void chrdev_free(struct chrdev* chrdev) {
     }
 
     if(chrdev->dev != 0) {
-        unregister_chrdev_region(chrdev->dev, 1);
+        unregister_chrdev_region(chrdev->dev, chrdev->count);
         chrdev->dev = 0;
     }
 
