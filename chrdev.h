@@ -12,7 +12,7 @@ struct chrdev_device {
 };
 
 struct chrdev {
-    char name[64];
+    char* name;
     struct class* class;
     dev_t dev;
     int count;
@@ -61,6 +61,7 @@ void chrdev_free(struct chrdev* chrdev) {
         chrdev->class = NULL;
     }
 
+    if(chrdev->name != NULL) kfree(chrdev->name);
     kfree(chrdev);
 }
 
@@ -114,7 +115,14 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
         goto err_out;
     }
 
-    strlcpy(chrdev->name, name, sizeof(chrdev->name));
+    chrdev->name = kstrdup(name, GFP_KERNEL);
+    if(IS_ERR_OR_NULL(chrdev->name)) {
+        error = PTR_ERR(chrdev->name);
+        if(error == 0) error = -ENOMEM;
+        chrdev->name = NULL;
+        M_ERR("kstrdup: error = %d\n", error);
+        goto err_out;
+    }
 
     chrdev->class = class_create(THIS_MODULE, chrdev->name);
     if(IS_ERR_OR_NULL(chrdev->class)) {
