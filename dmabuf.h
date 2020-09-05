@@ -80,6 +80,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
         }
 
 
+retry:
         entry->size = entry_size;
         M_DEBUG("dma_alloc_coherent(size = 0x%lx)\n", entry->size);
         entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry->size, &entry->dma_handle, GFP_ATOMIC | __GFP_NOWARN); // see `pci_alloc_consistent`
@@ -87,6 +88,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
             M_ERR("dma_alloc_coherent(size = 0x%lx): error = %d\n", entry->size, error);
+            if(entry_size > PAGE_SIZE) { entry_size /= 2; goto retry; }
             kfree(entry);
             goto err_out;
         }
