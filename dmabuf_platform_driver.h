@@ -19,14 +19,14 @@ void dmabuf_platform_driver_cleanup(struct platform_device* pdev) {
 
 static
 int dmabuf_platform_driver_probe(struct platform_device* pdev) {
-    long error = 0;
+    int error;
     struct chrdev* chrdev = NULL;
 
     M_INFO("\n");
 
     error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
     if(error) {
-        M_ERR("dma_set_mask_and_coherent: error = %ld\n", error);
+        M_ERR("dma_set_mask_and_coherent: error = %d\n", error);
         goto err_out;
     }
 
@@ -34,7 +34,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;
-        M_ERR("chrdev_alloc: error = %ld\n", error);
+        M_ERR("chrdev_alloc: error = %d\n", error);
         goto err_out;
     }
     platform_set_drvdata(pdev, chrdev);

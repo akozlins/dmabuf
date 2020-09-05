@@ -65,7 +65,7 @@ void chrdev_free(struct chrdev* chrdev) {
 }
 
 static
-int chrdev_device_add(struct chrdev* chrdev, int i, struct device *parent) {
+int chrdev_device_add(struct chrdev* chrdev, int i, struct device* parent) {
     int error;
     struct chrdev_device* chrdev_device;
 
@@ -100,7 +100,7 @@ err_out:
 
 static
 struct chrdev* chrdev_alloc(const char* name, int count, const struct file_operations* fops) {
-    long error;
+    int error;
     struct chrdev* chrdev;
 
     M_INFO("name = %s, count = %d\n", name, count);
@@ -110,7 +110,7 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
         error = PTR_ERR(chrdev);
         if(error == 0) error = -ENOMEM;
         chrdev = NULL;
-        M_ERR("kzalloc: error = %ld\n", error);
+        M_ERR("kzalloc: error = %d\n", error);
         goto err_out;
     }
 
@@ -120,14 +120,14 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
     if(IS_ERR_OR_NULL(chrdev->class)) {
         error = PTR_ERR(chrdev->class);
         chrdev->class = NULL;
-        M_ERR("class_create: error = %ld\n", error);
+        M_ERR("class_create: error = %d\n", error);
         goto err_out;
     }
 
     error = alloc_chrdev_region(&chrdev->dev, 0, count, chrdev->name);
     if(error) {
         chrdev->dev = 0;
-        M_ERR("alloc_chrdev_region: error = %ld\n", error);
+        M_ERR("alloc_chrdev_region: error = %d\n", error);
         goto err_out;
     }
 

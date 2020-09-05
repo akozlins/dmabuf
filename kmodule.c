@@ -11,13 +11,13 @@ static struct platform_device* dmabuf_platform_device = NULL;
 
 static
 int __init dmabuf_module_init(void) {
-    long error = 0;
+    int error;
 
     M_INFO("\n");
 
     error = platform_driver_register(&dmabuf_platform_driver);
     if(error) {
-        M_ERR("platform_driver_register: error = %ld\n", error);
+        M_ERR("platform_driver_register: error = %d\n", error);
         goto err_out;
     }
 

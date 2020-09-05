@@ -5,7 +5,7 @@
 
 static
 struct platform_device* dmabuf_platform_device_register(const char* name) {
-    long error = 0;
+    int error;
     struct platform_device* pdev = NULL;
 
     // TODO: use platform_device_register_simple
@@ -14,13 +14,13 @@ struct platform_device* dmabuf_platform_device_register(const char* name) {
     if(IS_ERR_OR_NULL(pdev)) {
         error = PTR_ERR(pdev);
         pdev = NULL;
-        M_ERR("platform_device_alloc: error = %ld\n", error);
+        M_ERR("platform_device_alloc: error = %d\n", error);
         goto err_out;
     }
 
     error = platform_device_add(pdev);
     if(error) {
-        M_ERR("platform_device_add: error = %ld\n", error);
+        M_ERR("platform_device_add: error = %d\n", error);
         goto err_pdev_put;
     }
 

@@ -34,20 +34,20 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 }
 
 static
-struct dmabuf* dmabuf_alloc(struct device* dev, int size) {
-    long error;
+struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
+    int error;
     struct dmabuf* dmabuf;
-    int entry_size = 1 << (10 + PAGE_SHIFT);
+    size_t entry_size = 1 << (10 + PAGE_SHIFT);
     int count = ALIGN(size, entry_size) / entry_size;
 
-    M_INFO("\n");
+    M_INFO("size = 0x%lx\n", size);
 
     dmabuf = kzalloc(sizeof(*dmabuf) + count * sizeof(dmabuf->entries[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
         error = PTR_ERR(dmabuf);
         if(error == 0) error = -ENOMEM;
         dmabuf = NULL;
-        M_ERR("kzalloc: error = %ld\n", error);
+        M_ERR("kzalloc: error = %d\n", error);
         goto err_out;
     }
 
@@ -57,12 +57,12 @@ struct dmabuf* dmabuf_alloc(struct device* dev, int size) {
     for(int i = 0; i < dmabuf->count; i++) {
         struct dmabuf_entry* entry = &dmabuf->entries[i];
 
-        M_DEBUG("dma_alloc_coherent: i = %d\n", i);
+        M_DEBUG("dma_alloc_coherent: i = %d, size = 0x%lx\n", i, entry_size);
         entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry_size, &entry->dma_handle, GFP_ATOMIC); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(entry->cpu_addr)) {
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
-            M_ERR("dma_alloc_coherent: error = %ld\n", error);
+            M_ERR("dma_alloc_coherent: error = %d\n", error);
             goto err_out;
         }
 
