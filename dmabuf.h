@@ -80,7 +80,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
  *
  * @return - pointer to struct dmabuf
  *
- * @retval -EINVAL - invalid arguments
+ * @retval -EINVAL - if size is 0 or not multiple of page size
  * @retval -ENOMEM - out of memory (kzalloc or dma_alloc_coherent)
  */
 static
@@ -195,40 +195,37 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
 static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error;
-    size_t offset = 0;
+    typeof(vma->vm_start) vma_addr = vma->vm_start;
+    size_t vma_size = vma_pages(vma) << PAGE_SHIFT;
+    size_t offset = vma->vm_pgoff << PAGE_SHIFT;
     struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
 
-    M_INFO("vma_pages = 0x%lx, vm_pgoff = 0x%lx\n", vma_pages(vma), vma->vm_pgoff);
+    M_INFO("vma_size = 0x%lx, offset = 0x%lx\n", vma_size, offset);
 
-    if(vma_pages(vma) != PAGE_ALIGN(dmabuf->size) >> PAGE_SHIFT) {
-        return -EINVAL;
-    }
-    if(vma->vm_pgoff != 0) {
-        return -EINVAL;
-    }
+    if(offset != 0) return -EINVAL;
+    if(vma_size != dmabuf->size) return -EINVAL;
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
     // the mm semaphore is already held (by mmap)
-    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do mmap
         unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)); // see `dma_direct_mmap`
 
+        size_t size = entry->size;
+
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, entry->size);
-        error = remap_pfn_range(vma,
-            vma->vm_start + offset,
-            pfn,
-            entry->size, vma->vm_page_prot
-        );
+        error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
         if(error) {
             M_ERR("remap_pfn_range(pfn = 0x%lx, size = 0x%lx): error = %d\n", pfn, entry->size, error);
             goto err_out;
         }
 
-        offset += entry->size;
+        vma_addr += size;
+        vma_size -= size;
     }
 
     return 0;
@@ -244,13 +241,13 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
 
     if(dmabuf == NULL) return -EFAULT;
 
-    list_for_each_entry(entry, &dmabuf->entries, list_head) { // skip
+    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do skip
         if(offset < entry->size) break;
         offset -= entry->size;
     }
-    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // copy
+    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // do copy
         size_t size = entry->size - offset;
-        if(size > user_size) size = user_size;
+        if(user_size < size) size = user_size;
         if(size == 0) break;
 
         M_DEBUG("copy_to_user(size = 0x%lx)\n", size);
@@ -274,13 +271,13 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
 
     if(dmabuf == NULL) return -EFAULT;
 
-    list_for_each_entry(entry, &dmabuf->entries, list_head) { // skip
+    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do skip
         if(offset < entry->size) break;
         offset -= entry->size;
     }
-    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // copy
+    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // do copy
         size_t size = entry->size - offset;
-        if(size > user_size) size = user_size;
+        if(user_size < size) size = user_size;
         if(size == 0) break;
 
         M_DEBUG("copy_from_user(size = 0x%lx)\n", size);
