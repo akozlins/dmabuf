@@ -11,51 +11,110 @@
 
 #include <memory>
 
+#define INFO(fmt, ...) printf("I [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define ERR(fmt, ...) printf("E [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define FATAL(fmt, ...) printf("F [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+
+struct test_t {
+    int fd = -1;
+    uint32_t* addr = NULL;
+
+    void open(const char* file = "/dev/dmabuf0") {
+        INFO("file = %s\n", file);
+        fd = ::open(file, O_RDWR | O_CLOEXEC);
+        if(fd < 0) {
+            FATAL("open: errno = %d\n", errno);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    ssize_t seek_set(ssize_t offset = 0) const {
+        INFO("offset = %ld\n", offset);
+        ssize_t pos = lseek(fd, offset, SEEK_SET);
+        if(pos < 0) {
+            FATAL("lseek(SEEK_SET) < 0\n");
+            exit(EXIT_FAILURE);
+        }
+        return pos;
+    }
+
+    ssize_t seek_end(ssize_t offset = 0) const {
+        INFO("offset = %ld\n", offset);
+        ssize_t pos = lseek(fd, offset, SEEK_END);
+        if(pos < 0) {
+            FATAL("lseek(SEEK_END) < 0\n");
+            exit(EXIT_FAILURE);
+        }
+        return pos;
+    }
+
+    void mmap(size_t size, size_t offset) {
+        INFO("size = %ld, offset = %ld\n", size, offset);
+        addr = (uint32_t*)::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
+        if(addr == MAP_FAILED) {
+            FATAL("mmap: errno = %d\n", errno);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void read(void* buffer, size_t size) {
+        INFO("size = %ld\n", size);
+        ssize_t n = ::read(fd, buffer, size);
+        if(n != size) {
+            FATAL("read: n = %ld\n", n);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void write(const void* buffer, size_t size) {
+        INFO("size = %ld\n", size);
+        ssize_t n = ::write(fd, buffer, size);
+        if(n != size) {
+            FATAL("write: n = %ld\n", n);
+            exit(EXIT_FAILURE);
+        }
+    }
+};
+
 int main() {
-    int fd = open("/dev/dmabuf0", O_RDWR | O_CLOEXEC);
-    if(fd < 0) {
-        printf("F [] open: errno = %d\n", errno);
-        return EXIT_FAILURE;
-    }
+    test_t test;
+    test.open();
 
-    ssize_t size = lseek(fd, 0, SEEK_END);
-    printf("I [] size = %ld\n", size);
-    if(lseek(fd, 0, SEEK_SET) < 0 || size < 0) {
-        printf("F [] lseek < 0\n");
-        return EXIT_FAILURE;
-    }
+    size_t size = test.seek_end();
+    size_t offset = 0;
 
+    // init write buffer
     auto wbuffer = std::make_unique<uint32_t[]>(size/4);
     for(int i = 0; i < size/4; i++) wbuffer[i] = i;
-    int wn = write(fd, wbuffer.get(), size);
-    printf("I [] wn = %d\n", wn);
 
-    auto mmap_addr = (uint32_t*)mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if(mmap_addr == MAP_FAILED) {
-        printf("F [] mmap: errno = %d\n", errno);
-        return EXIT_FAILURE;
-    }
-    printf("I [] mmap_addr = %p\n", mmap_addr);
+    // write to DMA buffer
+    test.seek_set(offset);
+    test.write(wbuffer.get(), size);
+
+    // mmap and check that mmap'd DMA buffer == write buffer
+    test.mmap(size, offset);
     for(int i = 0; i < size/4; i++) {
-        if(mmap_addr[i] == wbuffer[i]) continue;
-        printf("E [] mmap_addr[%d] != wbuffer[%d]\n", i, i);
+        if(test.addr[i] == wbuffer[i]) continue;
+        ERR("mmap_addr[%d] != wbuffer[%d]\n", i, i);
     }
-    munmap(mmap_addr, size);
 
+    // init read buffer
     auto rbuffer = std::make_unique<uint32_t[]>(size/4);
     for(int i = 0; i < size/4; i++) rbuffer[i] = 0;
-    if(lseek(fd, 0, SEEK_SET) < 0) {
-        printf("F [] lseek < 0\n");
-        return EXIT_FAILURE;
-    }
-    int rn = read(fd, rbuffer.get(), size);
-    printf("I [] rn = %d\n", rn);
+
+    // read from DMA buffer
+    test.seek_set(offset);
+    test.read(rbuffer.get(), size);
+
+    // check that read buffer == write buffer
     for(int i = 0; i < size/4; i++) {
         if(rbuffer[i] == wbuffer[i]) continue;
-        printf("E [] rbuffer[%d] != wbuffer[%d]\n", i, i);
+        ERR("rbuffer[%d] != wbuffer[%d]\n", i, i);
     }
 
-    close(fd);
+    // cleanup
+    munmap(test.addr, size);
+    close(test.fd);
 
     return 0;
 }
