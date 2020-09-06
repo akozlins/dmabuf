@@ -52,9 +52,9 @@ void chrdev_free(struct chrdev* chrdev) {
         chrdev_device_del(chrdev, i);
     }
 
-    if(chrdev->dev != 0) {
+    if(chrdev->count != 0) {
         unregister_chrdev_region(chrdev->dev, chrdev->count);
-        chrdev->dev = 0;
+        chrdev->count = 0;
     }
 
     if(!IS_ERR_OR_NULL(chrdev->class)) {
@@ -159,11 +159,9 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
 
     error = alloc_chrdev_region(&chrdev->dev, 0, count, chrdev->name);
     if(error) {
-        chrdev->dev = 0;
         M_ERR("alloc_chrdev_region(count = %d, name = '%s'): error = %d\n", count, name, error);
         goto err_out;
     }
-
     chrdev->count = count;
 
     for(int i = 0; i < chrdev->count; i++) {

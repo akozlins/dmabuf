@@ -9,7 +9,7 @@ void dmabuf_platform_driver_cleanup(struct platform_device* pdev) {
 
     for(int i = 0; i < chrdev->count; i++) {
         struct dmabuf* dmabuf = chrdev->devices[i].private_data;
-        if(dmabuf == NULL) continue;
+        chrdev_device_del(chrdev, i);
         chrdev->devices[i].private_data = NULL;
         dmabuf_free(dmabuf);
     }
@@ -27,7 +27,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 
     error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
     if(error) {
-        M_ERR("dma_set_mask_and_coherent: error = %d\n", error);
+        M_ERR("dma_set_mask_and_coherent(mask = DMA_BIT_MASK(64)): error = %d\n", error);
         goto err_out;
     }
 

@@ -17,7 +17,7 @@
 
 struct test_t {
     int fd = -1;
-    uint32_t* addr = NULL;
+    uint32_t* addr = nullptr;
 
     void open(const char* file = "/dev/dmabuf0") {
         INFO("file = %s\n", file);
@@ -29,7 +29,7 @@ struct test_t {
     }
 
     ssize_t seek_set(ssize_t offset = 0) const {
-        INFO("offset = %ld\n", offset);
+        INFO("offset = 0x%lx\n", offset);
         ssize_t pos = lseek(fd, offset, SEEK_SET);
         if(pos < 0) {
             FATAL("lseek(SEEK_SET) < 0\n");
@@ -39,7 +39,7 @@ struct test_t {
     }
 
     ssize_t seek_end(ssize_t offset = 0) const {
-        INFO("offset = %ld\n", offset);
+        INFO("offset = 0x%lx\n", offset);
         ssize_t pos = lseek(fd, offset, SEEK_END);
         if(pos < 0) {
             FATAL("lseek(SEEK_END) < 0\n");
@@ -49,7 +49,7 @@ struct test_t {
     }
 
     void mmap(size_t size, size_t offset) {
-        INFO("size = %ld, offset = %ld\n", size, offset);
+        INFO("size = 0x%lx, offset = 0x%lx\n", size, offset);
         addr = (uint32_t*)::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
         if(addr == MAP_FAILED) {
             FATAL("mmap: errno = %d\n", errno);
@@ -57,20 +57,20 @@ struct test_t {
         }
     }
 
-    void read(void* buffer, size_t size) {
-        INFO("size = %ld\n", size);
+    void read(void* buffer, size_t size) const {
+        INFO("size = 0x%lx\n", size);
         ssize_t n = ::read(fd, buffer, size);
         if(n != size) {
-            FATAL("read: n = %ld\n", n);
+            FATAL("read: n = 0x%lx\n", n);
             exit(EXIT_FAILURE);
         }
     }
 
-    void write(const void* buffer, size_t size) {
-        INFO("size = %ld\n", size);
+    void write(const void* buffer, size_t size) const {
+        INFO("size = 0x%lx\n", size);
         ssize_t n = ::write(fd, buffer, size);
         if(n != size) {
-            FATAL("write: n = %ld\n", n);
+            FATAL("write: n = 0x%lx\n", n);
             exit(EXIT_FAILURE);
         }
     }
@@ -95,7 +95,7 @@ int main() {
     test.mmap(size, offset);
     for(int i = 0; i < size/4; i++) {
         if(test.addr[i] == wbuffer[i]) continue;
-        ERR("mmap_addr[%d] != wbuffer[%d]\n", i, i);
+        ERR("mmap_addr[0x%x] != wbuffer[0x%x]\n", i, i);
     }
 
     // init read buffer
@@ -109,7 +109,7 @@ int main() {
     // check that read buffer == write buffer
     for(int i = 0; i < size/4; i++) {
         if(rbuffer[i] == wbuffer[i]) continue;
-        ERR("rbuffer[%d] != wbuffer[%d]\n", i, i);
+        ERR("rbuffer[0x%x] != wbuffer[0x%x]\n", i, i);
     }
 
     // cleanup
