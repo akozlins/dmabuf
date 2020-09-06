@@ -31,6 +31,28 @@ int dmabuf_entry_cmp(void* priv, struct list_head* a, struct list_head* b) {
     return 0;
 }
 
+/**
+ * Report contiguous DMA handles.
+ *
+ * @param dmabuf
+ */
+static
+void dmabuf_report(struct dmabuf* dmabuf) {
+    struct dmabuf_entry* entry;
+    if(IS_ERR_OR_NULL(dmabuf)) return;
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        dma_addr_t dma_handle = entry->dma_handle;
+        size_t size = entry->size;
+        while(!list_is_last(&entry->list_head, &dmabuf->entries)) {
+            typeof(entry) next = list_next_entry(entry, list_head);
+            if(dma_handle + size != next->dma_handle) break;
+            size += next->size;
+            entry = next;
+        }
+        M_INFO("dma_handle = 0x%llx, size = 0x%lx", dma_handle, size);
+    }
+}
+
 static
 void dmabuf_free(struct dmabuf* dmabuf) {
     M_INFO("\n");
@@ -117,18 +139,7 @@ retry:
     // sort by dma_handle
     list_sort(NULL, &dmabuf->entries, dmabuf_entry_cmp);
 
-    // report contiguous DMA handles
-    dmabuf_entry_for_each(entry, &dmabuf->entries) {
-        dma_addr_t dma_handle = entry->dma_handle;
-        size_t dma_size = entry->size;
-        while(!list_is_last(&entry->list_head, &dmabuf->entries)) {
-            struct dmabuf_entry* next = list_next_entry(entry, list_head);
-            if(dma_handle + dma_size != next->dma_handle) break;
-            dma_size += next->size;
-            entry = next;
-        }
-        M_INFO("dma_handle = 0x%llx, dma_size = 0x%lx", dma_handle, dma_size);
-    }
+    dmabuf_report(dmabuf);
 
     return dmabuf;
 
