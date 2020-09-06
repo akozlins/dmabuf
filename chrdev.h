@@ -82,7 +82,7 @@ int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
 
     M_INFO("minor = %d\n", minor);
 
-    if(IS_ERR_OR_NULL(chrdev)) return -EINVAL;
+    if(IS_ERR_OR_NULL(chrdev)) return -EFAULT;
     if(!(0 <= minor && minor < chrdev->count)) return -EINVAL;
 
     chrdev_device = &chrdev->devices[minor];
@@ -126,6 +126,8 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
     struct chrdev* chrdev;
 
     M_INFO("name = '%s', count = %d\n", name, count);
+
+    if(name == NULL || count <= 0) return ERR_PTR(-EINVAL);
 
     chrdev = kzalloc(sizeof(*chrdev) + count * sizeof(chrdev->devices[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {

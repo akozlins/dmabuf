@@ -86,7 +86,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 static
 struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     int error;
-    size_t entry_size = PAGE_SIZE << 10;
+    size_t entry_size = PAGE_SIZE << 10; // start from 1024 pages (4 MB)
     struct dmabuf* dmabuf;
 
     M_INFO("size = 0x%lx\n", size);
@@ -116,7 +116,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
             goto err_out;
         }
 
-retry:
+retry_alloc:
         entry->size = entry_size;
         M_DEBUG("dma_alloc_coherent(size = 0x%lx)\n", entry->size);
         entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry->size, &entry->dma_handle, GFP_ATOMIC | __GFP_NOWARN); // see `pci_alloc_consistent`
@@ -124,7 +124,11 @@ retry:
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
             M_ERR("dma_alloc_coherent(size = 0x%lx): error = %d\n", entry->size, error);
-            if(entry_size > PAGE_SIZE) { entry_size /= 2; goto retry; }
+            if(entry_size > PAGE_SIZE) {
+                // reduce allocation order and try again
+                entry_size /= 2;
+                goto retry_alloc;
+            }
             kfree(entry);
             goto err_out;
         }
@@ -190,13 +194,13 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
  */
 static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
-    int error = 0;
+    int error;
     size_t offset = 0;
     struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
 
-    M_INFO("vm_start = 0x%lx, vm_pgoff = 0x%lx, vma_pages = 0x%lx\n", vma->vm_start, vma->vm_pgoff, vma_pages(vma));
+    M_INFO("vma_pages = 0x%lx, vm_pgoff = 0x%lx\n", vma_pages(vma), vma->vm_pgoff);
 
     if(vma_pages(vma) != PAGE_ALIGN(dmabuf->size) >> PAGE_SHIFT) {
         return -EINVAL;
@@ -209,6 +213,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
+    // the mm semaphore is already held (by mmap)
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
         unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)); // see `dma_direct_mmap`
 
@@ -220,12 +225,15 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         );
         if(error) {
             M_ERR("remap_pfn_range(pfn = 0x%lx, size = 0x%lx): error = %d\n", pfn, entry->size, error);
-            break;
+            goto err_out;
         }
 
         offset += entry->size;
     }
 
+    return 0;
+
+err_out:
     return error;
 }
 
