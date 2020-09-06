@@ -49,13 +49,17 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 /**
  * Allocate DMA buffer.
  *
- * Use dma_alloc_coherent to allocate list of buffers
+ * Use dma_alloc_coherent to allocate list of struct dmabuf_entry objects
  * that back the requested size of the DMA buffer.
+ *
+ * The list is sorted by dma_handle
+ * such that contiguous ranges can be combined
+ * when passing handle and size to the device.
  *
  * @param dev - associated struct device pointer
  * @param size - required size of the buffer
  *
- * @return - valid pointer or ERR_PTR(error)
+ * @return - pointer to struct dmabuf
  *
  * @retval -EINVAL - invalid arguments
  * @retval -ENOMEM - out of memory (kzalloc or dma_alloc_coherent)
@@ -151,6 +155,21 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
     return -EINVAL;
 }
 
+/**
+ * Map DMA buffer to user address space.
+ *
+ * Use pgprot_noncached to set page protection
+ * and map each dmabuf_entry with remap_pfn_range.
+ *
+ * @param dmabuf
+ * @param vma
+ *
+ * @return 0 on success
+ *
+ * @retval -EINVAL - if number of pages does not correspond to buffer size
+ *                   or page offset is not 0
+ * @retval errors from remap_pfn_range
+ */
 static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error = 0;

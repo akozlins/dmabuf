@@ -65,6 +65,16 @@ void chrdev_free(struct chrdev* chrdev) {
     kfree(chrdev);
 }
 
+/**
+ * @param chrdev
+ * @param minor - minor number for this device
+ * @param parent - parent struct device
+ *
+ * @return 0 on success
+ *
+ * @retval -EINVAL - invalid minor number
+ * @retval errors from cdev_add and device_create
+ */
 static
 int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
     int error;
@@ -99,6 +109,17 @@ err_out:
     return error;
 }
 
+/**
+ * @param name - name of class and associated device or driver
+ * @param count - required number of minor numbers
+ * @param fops - file_operations for this device
+ *
+ * @return pointer to struct chrdev
+ *
+ * @retval -EINVAL - if name == NULL or count <= 0
+ * @retval -ENOMEM - out of memory
+ * @retval errors from class_create and alloc_chrdev_region
+ */
 static
 struct chrdev* chrdev_alloc(const char* name, int count, const struct file_operations* fops) {
     int error;
