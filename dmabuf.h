@@ -150,20 +150,28 @@ err_out:
 
 static
 loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int whence) {
+    loff_t loff_new;
+
     if(dmabuf == NULL) return -EFAULT;
 
-    if(whence == SEEK_END && 0 <= -loff && -loff <= dmabuf->size) {
-        file->f_pos = dmabuf->size + loff;
-        return file->f_pos;
+    switch(whence) {
+    case SEEK_END:
+        loff_new = dmabuf->size + loff;
+        break;
+    case SEEK_SET:
+        loff_new = loff;
+        break;
+    default:
+        loff_new = -1;
     }
 
-    if(whence == SEEK_SET && 0 <= loff && loff <= dmabuf->size) {
-        file->f_pos = loff;
-        return file->f_pos;
+    if(!(0 <= loff_new && loff_new <= dmabuf->size)) {
+        M_ERR("loff = 0x%llx, whence = %d\n", loff, whence);
+        return -EINVAL;
     }
 
-    M_ERR("loff = 0x%llx, whence = %d\n", loff, whence);
-    return -EINVAL;
+    file->f_pos = loff_new;
+    return file->f_pos;
 }
 
 /**
