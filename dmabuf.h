@@ -2,6 +2,7 @@
 #include "kmodule.h"
 
 #include <linux/dma-direct.h>
+#include <linux/list_sort.h>
 
 struct dmabuf_entry {
     size_t size;
@@ -10,17 +11,11 @@ struct dmabuf_entry {
     struct list_head list_head;
 };
 
-#define dmabuf_entry_for_each(pos, head) \
-    for(struct dmabuf_entry* pos = NULL; pos == NULL; pos = ERR_PTR(-EINVAL)) \
-    list_for_each_entry(pos, head, list_head)
-
 struct dmabuf {
     struct device* dev;
     size_t size;
     struct list_head entries;
 };
-
-#include <linux/list_sort.h>
 
 static
 int dmabuf_entry_cmp(void* priv, struct list_head* a, struct list_head* b) {
@@ -55,11 +50,13 @@ void dmabuf_report(struct dmabuf* dmabuf) {
 
 static
 void dmabuf_free(struct dmabuf* dmabuf) {
+    struct dmabuf_entry* entry;
+
     M_INFO("\n");
 
     if(IS_ERR_OR_NULL(dmabuf)) return;
 
-    dmabuf_entry_for_each(entry, &dmabuf->entries) {
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
         M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%lx)\n", entry->dma_handle, entry->size);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
         kfree(entry);
@@ -193,6 +190,7 @@ static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error = 0;
     size_t offset = 0;
+    struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
 
@@ -209,7 +207,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
-    dmabuf_entry_for_each(entry, &dmabuf->entries) {
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
         unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)); // see `dma_direct_mmap`
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, entry->size);
@@ -232,19 +230,18 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 static
 ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user_size, loff_t offset) {
     ssize_t n = 0;
+    struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
 
-    dmabuf_entry_for_each(entry, &dmabuf->entries) {
-        size_t size;
-        if(user_size == 0) break;
-        if(offset >= entry->size) {
-            offset -= entry->size;
-            continue;
-        }
-
-        size = entry->size - offset;
+    list_for_each_entry(entry, &dmabuf->entries, list_head) { // skip
+        if(offset < entry->size) break;
+        offset -= entry->size;
+    }
+    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // copy
+        size_t size = entry->size - offset;
         if(size > user_size) size = user_size;
+        if(size == 0) break;
 
         M_DEBUG("copy_to_user(size = 0x%lx)\n", size);
         if(copy_to_user(user_buffer, entry->cpu_addr + offset, size)) {
@@ -254,7 +251,7 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
         n += size;
         user_buffer += size;
         user_size -= size;
-        offset = 0;
+        offset = 0; // offset is 0 for next entry
     }
 
     return n;
@@ -263,19 +260,18 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
 static
 ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size_t user_size, loff_t offset) {
     ssize_t n = 0;
+    struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
 
-    dmabuf_entry_for_each(entry, &dmabuf->entries) {
-        size_t size;
-        if(user_size == 0) break;
-        if(offset >= entry->size) {
-            offset -= entry->size;
-            continue;
-        }
-
-        size = entry->size - offset;
+    list_for_each_entry(entry, &dmabuf->entries, list_head) { // skip
+        if(offset < entry->size) break;
+        offset -= entry->size;
+    }
+    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // copy
+        size_t size = entry->size - offset;
         if(size > user_size) size = user_size;
+        if(size == 0) break;
 
         M_DEBUG("copy_from_user(size = 0x%lx)\n", size);
         if(copy_from_user(entry->cpu_addr + offset, user_buffer, size)) {
@@ -285,7 +281,7 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
         n += size;
         user_buffer += size;
         user_size -= size;
-        offset = 0;
+        offset = 0; // offset is 0 for next entry
     }
 
     return n;
