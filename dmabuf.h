@@ -92,7 +92,9 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     M_INFO("size = 0x%lx\n", size);
 
     if(dev == NULL) return ERR_PTR(-EFAULT);
-    if(size == 0 || !IS_ALIGNED(size, PAGE_SIZE)) return ERR_PTR(EINVAL);
+    if(size == 0 || !IS_ALIGNED(size, PAGE_SIZE)) {
+        return ERR_PTR(-EINVAL);
+    }
 
     dmabuf = kzalloc(sizeof(*dmabuf), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
