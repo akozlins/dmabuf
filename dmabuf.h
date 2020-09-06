@@ -46,18 +46,30 @@ void dmabuf_free(struct dmabuf* dmabuf) {
     kfree(dmabuf);
 }
 
+/**
+ * Allocate DMA buffer.
+ *
+ * Use dma_alloc_coherent to allocate list of buffers
+ * that back the requested size of the DMA buffer.
+ *
+ * @param dev - associated struct device pointer
+ * @param size - required size of the buffer
+ *
+ * @return - valid pointer or ERR_PTR(error)
+ *
+ * @retval -EINVAL - invalid arguments
+ * @retval -ENOMEM - out of memory (kzalloc or dma_alloc_coherent)
+ */
 static
 struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     int error;
     size_t entry_size = PAGE_SIZE << 10;
-    struct dmabuf* dmabuf = NULL;
+    struct dmabuf* dmabuf;
 
     M_INFO("size = 0x%lx\n", size);
 
-    if(dev == NULL || size == 0 || !IS_ALIGNED(size, PAGE_SIZE)) {
-        error = -EINVAL;
-        goto err_out;
-    }
+    if(dev == NULL) return ERR_PTR(-EFAULT);
+    if(size == 0 || !IS_ALIGNED(size, PAGE_SIZE)) return ERR_PTR(EINVAL);
 
     dmabuf = kzalloc(sizeof(*dmabuf), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
@@ -78,7 +90,6 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
             M_ERR("kzalloc: error = %d\n", error);
             goto err_out;
         }
-
 
 retry:
         entry->size = entry_size;
@@ -124,10 +135,7 @@ err_out:
 
 static
 loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int whence) {
-    if(dmabuf == NULL) {
-        M_ERR("dmabuf == NULL\n");
-        return -EFAULT;
-    }
+    if(dmabuf == NULL) return -EFAULT;
 
     if(whence == SEEK_END && 0 <= -loff && -loff <= dmabuf->size) {
         file->f_pos = dmabuf->size + loff;
@@ -148,10 +156,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error = 0;
     size_t offset = 0;
 
-    if(dmabuf == NULL) {
-        M_ERR("dmabuf == NULL\n");
-        return -EFAULT;
-    }
+    if(dmabuf == NULL) return -EFAULT;
 
     M_INFO("vm_start = 0x%lx, vm_pgoff = 0x%lx, vma_pages = 0x%lx\n", vma->vm_start, vma->vm_pgoff, vma_pages(vma));
 
@@ -190,10 +195,7 @@ static
 ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user_size, loff_t offset) {
     ssize_t n = 0;
 
-    if(dmabuf == NULL) {
-        M_ERR("dmabuf == NULL\n");
-        return -EFAULT;
-    }
+    if(dmabuf == NULL) return -EFAULT;
 
     dmabuf_entry_for_each(entry, &dmabuf->entries) {
         size_t size;
@@ -224,10 +226,7 @@ static
 ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size_t user_size, loff_t offset) {
     ssize_t n = 0;
 
-    if(dmabuf == NULL) {
-        M_ERR("dmabuf == NULL\n");
-        return -EFAULT;
-    }
+    if(dmabuf == NULL) return -EFAULT;
 
     dmabuf_entry_for_each(entry, &dmabuf->entries) {
         size_t size;
