@@ -73,7 +73,7 @@ void chrdev_free(struct chrdev* chrdev) {
  * @return 0 on success
  *
  * @retval -EINVAL - invalid minor number
- * @retval errors from cdev_add and device_create
+ * @retval - errors from cdev_add and device_create
  */
 static
 int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
@@ -83,6 +83,7 @@ int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
     M_INFO("minor = %d\n", minor);
 
     if(IS_ERR_OR_NULL(chrdev)) return -EFAULT;
+
     if(!(0 <= minor && minor < chrdev->count)) return -EINVAL;
 
     chrdev_device = &chrdev->devices[minor];
@@ -118,7 +119,7 @@ err_out:
  *
  * @retval -EINVAL - if name == NULL or count <= 0
  * @retval -ENOMEM - out of memory
- * @retval errors from class_create and alloc_chrdev_region
+ * @retval - errors from class_create and alloc_chrdev_region
  */
 static
 struct chrdev* chrdev_alloc(const char* name, int count, const struct file_operations* fops) {

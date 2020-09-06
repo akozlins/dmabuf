@@ -29,12 +29,17 @@ int dmabuf_entry_cmp(void* priv, struct list_head* a, struct list_head* b) {
 /**
  * Report contiguous DMA handles.
  *
- * @param dmabuf
+ * @param dmabuf - pointer to struct dmabuf
+ *
+ * @return - number of contiguous DMA handles
  */
 static
-void dmabuf_report(struct dmabuf* dmabuf) {
+int dmabuf_report(struct dmabuf* dmabuf) {
+    int n = 0;
     struct dmabuf_entry* entry;
-    if(IS_ERR_OR_NULL(dmabuf)) return;
+
+    if(IS_ERR_OR_NULL(dmabuf)) return -EFAULT;
+
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
         dma_addr_t dma_handle = entry->dma_handle;
         size_t size = entry->size;
@@ -44,8 +49,11 @@ void dmabuf_report(struct dmabuf* dmabuf) {
             size += next->size;
             entry = next;
         }
+        n++;
         M_INFO("dma_handle = 0x%llx, size = 0x%lx", dma_handle, size);
     }
+
+    return n;
 }
 
 static
@@ -183,20 +191,19 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
  * Use pgprot_noncached to set page protection
  * and map each dmabuf_entry with remap_pfn_range.
  *
- * @param dmabuf
- * @param vma
+ * @param dmabuf - pointer to struct dmabuf
+ * @param vma - pointer to struct vm_area_struct
  *
- * @return 0 on success
+ * @return - 0 on success
  *
- * @retval -EINVAL - if number of pages does not correspond to buffer size
- *                   or page offset is not 0
- * @retval errors from remap_pfn_range
+ * @retval -EINVAL - if out of range
+ * @retval - errors from remap_pfn_range
  */
 static
 int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     int error;
     typeof(vma->vm_start) vma_addr = vma->vm_start;
-    size_t vma_size = vma_pages(vma) << PAGE_SHIFT;
+    size_t vma_size = vma->vm_end - vma->vm_start;
     size_t offset = vma->vm_pgoff << PAGE_SHIFT;
     struct dmabuf_entry* entry;
 
@@ -217,10 +224,10 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
         size_t size = entry->size;
 
-        M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, entry->size);
+        M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
         if(error) {
-            M_ERR("remap_pfn_range(pfn = 0x%lx, size = 0x%lx): error = %d\n", pfn, entry->size, error);
+            M_ERR("remap_pfn_range(pfn = 0x%lx, size = 0x%lx): error = %d\n", pfn, size, error);
             goto err_out;
         }
 
@@ -228,7 +235,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         vma_size -= size;
     }
 
-    return 0;
+    if(vma_size == 0) return 0;
 
 err_out:
     return error;
