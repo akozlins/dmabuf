@@ -211,18 +211,24 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     M_INFO("vma_size = 0x%lx, offset = 0x%lx\n", vma_size, offset);
 
-    if(offset != 0) return -EINVAL;
-    if(vma_size != dmabuf->size) return -EINVAL;
+    if(offset > dmabuf->size) return -EINVAL;
+    if(vma_size > dmabuf->size - offset) return -EINVAL;
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
+    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do skip
+        if(offset < entry->size) break;
+        offset -= entry->size;
+    }
     // the mm semaphore is already held (by mmap)
-    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do mmap
-        unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle)); // see `dma_direct_mmap`
+    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // do mmap
+        unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle + offset)); // see `dma_direct_mmap`
 
-        size_t size = entry->size;
+        size_t size = entry->size - offset;
+        if(vma_size < size) size = vma_size;
+        if(size == 0) break;
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
@@ -233,6 +239,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
         vma_addr += size;
         vma_size -= size;
+        offset = 0; // offset is 0 for next entry
     }
 
     if(vma_size == 0) return 0;
