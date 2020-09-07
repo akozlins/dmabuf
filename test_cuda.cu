@@ -1,12 +1,5 @@
 
-#include <cerrno>
-#include <cstdint>
-#include <cstdio>
-
-#include <fcntl.h>
-#include <unistd.h>
-
-#include <sys/mman.h>
+#include "test.h"
 
 inline
 void cuda_assert(cudaError_t cudaError, const char* function, const char* file, int line, bool abort = true) {
@@ -33,19 +26,9 @@ int main() {
     cudaDeviceProp deviceProperties;
     CUDA_ASSERT(cudaGetDeviceProperties(&deviceProperties, device));
 
-    printf("I [] open('/dev/dmabuf0')\n");
-    int fd = open("/dev/dmabuf0", O_RDWR);
-    if(fd < 0) {
-        printf("F [] open: errno = %d\n", errno);
-        return EXIT_FAILURE;
-    }
-
-    ssize_t size = lseek(fd, 0, SEEK_END);
-    printf("I [] size = %ld\n", size);
-    if(lseek(fd, 0, SEEK_SET) < 0 || size < 0) {
-        printf("F [] lseek < 0\n");
-        return EXIT_FAILURE;
-    }
+    test_t test;
+    ssize_t size = test.seek_end(), offset = 0;
+    test.mmap(size, offset);
 
     int nThreadsPerBlock = 1;
     while(2 * nThreadsPerBlock <= deviceProperties.maxThreadsPerBlock) nThreadsPerBlock *= 2;
@@ -55,15 +38,8 @@ int main() {
     uint32_t* wvalues;
 //    wvalues = (uint32_t*)malloc(size);
 //    cudaMallocHost(&wvalues, size);
-//    write(fd, wvalues, size);
-    printf("I [] mmap\n");
-    wvalues = (uint32_t*)mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    printf("I [] mmap = %p\n", wvalues);
+    wvalues = test.addr;
     for(int i = 0; i < size/4; i++) wvalues[i] = i;
-    if(wvalues == MAP_FAILED) {
-        printf("F [] mmap: errno = %d\n", errno);
-        return EXIT_FAILURE;
-    }
 //    CUDA_ASSERT(cudaHostRegister(wvalues, size, cudaHostRegisterDefault));
 
     // allocate device memory
