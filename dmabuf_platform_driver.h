@@ -50,7 +50,7 @@ err_out:
 static
 int dmabuf_platform_driver_remove(struct platform_device* pdev) {
     struct chrdev_device* chrdev_device = platform_get_drvdata(pdev);
-    struct dmabuf* dmabuf = chrdev_device != NULL ? dev_get_drvdata(chrdev_device->device) : NULL;
+    struct dmabuf* dmabuf = chrdev_device != NULL ? chrdev_device->private_data : NULL;
     int minor = chrdev_device != NULL ? (int)MINOR(chrdev_device->cdev.dev) : -1;
 
     M_INFO("\n");

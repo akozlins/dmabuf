@@ -9,6 +9,7 @@
 struct chrdev_device {
     struct cdev cdev;
     struct device* device;
+    void* private_data;
 };
 
 struct chrdev {
@@ -34,6 +35,8 @@ void chrdev_device_del(struct chrdev_device* chrdev_device) {
         cdev_del(&chrdev_device->cdev);
         chrdev_device->cdev.count = 0;
     }
+
+    chrdev_device->private_data = NULL;
 }
 
 static
@@ -77,7 +80,7 @@ void chrdev_free(struct chrdev* chrdev) {
  * @retval - errors from cdev_add and device_create
  */
 static
-struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const struct file_operations* fops, struct device* parent, void* drvdata) {
+struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const struct file_operations* fops, struct device* parent, void* private_data) {
     int error;
     struct chrdev_device* chrdev_device;
 
@@ -93,6 +96,8 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const 
     chrdev_device->cdev.owner = THIS_MODULE;
     chrdev_device->cdev.dev = MKDEV(MAJOR(chrdev->dev), MINOR(chrdev->dev) + minor);
 
+    chrdev_device->private_data = private_data;
+
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
         chrdev_device->cdev.count = 0;
@@ -100,7 +105,7 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const 
         goto err_out;
     }
 
-    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, drvdata, "%s%d", chrdev->name, minor);
+    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, minor);
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
