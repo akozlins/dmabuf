@@ -254,7 +254,9 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         offset = 0; // offset is 0 for next entry
     }
 
-    if(vma_size == 0) return 0;
+    if(vma_size != 0) return -EINVAL;
+
+    return 0;
 
 err_out:
     return error;
