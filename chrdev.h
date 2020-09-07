@@ -9,7 +9,6 @@
 struct chrdev_device {
     struct cdev cdev;
     struct device* device;
-    void* private_data;
 };
 
 struct chrdev {
@@ -21,18 +20,13 @@ struct chrdev {
 };
 
 static
-void chrdev_device_del(struct chrdev* chrdev, int minor) {
-    struct chrdev_device* chrdev_device;
+void chrdev_device_del(struct chrdev_device* chrdev_device) {
+    M_INFO("\n");
 
-    M_INFO("minor = %d\n", minor);
-
-    if(IS_ERR_OR_NULL(chrdev)) return;
-    if(!(0 <= minor && minor < chrdev->count)) return;
-
-    chrdev_device = &chrdev->devices[minor];
+    if(IS_ERR_OR_NULL(chrdev_device)) return;
 
     if(!IS_ERR_OR_NULL(chrdev_device->device)) {
-        device_destroy(chrdev->class, chrdev_device->cdev.dev);
+        device_destroy(chrdev_device->device->class, chrdev_device->cdev.dev);
         chrdev_device->device = NULL;
     }
 
@@ -49,7 +43,7 @@ void chrdev_free(struct chrdev* chrdev) {
     if(IS_ERR_OR_NULL(chrdev)) return;
 
     for(int i = 0; i < chrdev->count; i++) {
-        chrdev_device_del(chrdev, i);
+        chrdev_device_del(&chrdev->devices[i]);
     }
 
     if(chrdev->count != 0) {
@@ -71,21 +65,21 @@ void chrdev_free(struct chrdev* chrdev) {
  * @param minor - minor number for this device
  * @param parent - parent struct device
  *
- * @return 0 on success
+ * @return - pointer to struct chrdev_device
  *
  * @retval -EINVAL - invalid minor number
  * @retval - errors from cdev_add and device_create
  */
 static
-int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
+struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent, void* drvdata) {
     int error;
     struct chrdev_device* chrdev_device;
 
     M_INFO("minor = %d\n", minor);
 
-    if(IS_ERR_OR_NULL(chrdev)) return -EFAULT;
+    if(IS_ERR_OR_NULL(chrdev)) return ERR_PTR(-EFAULT);
 
-    if(!(0 <= minor && minor < chrdev->count)) return -EINVAL;
+    if(!(0 <= minor && minor < chrdev->count)) return ERR_PTR(-EINVAL);
 
     chrdev_device = &chrdev->devices[minor];
 
@@ -96,7 +90,7 @@ int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
         goto err_out;
     }
 
-    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, minor);
+    chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, drvdata, "%s%d", chrdev->name, minor);
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
         error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
@@ -104,11 +98,11 @@ int chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent) {
         goto err_out;
     }
 
-    return 0;
+    return chrdev_device;
 
 err_out:
-    chrdev_device_del(chrdev, minor);
-    return error;
+    chrdev_device_del(chrdev_device);
+    return ERR_PTR(error);
 }
 
 /**

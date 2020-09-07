@@ -44,7 +44,7 @@ int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
         return -ENODEV;
     }
 
-    dmabuf = chrdev_device->private_data;
+    dmabuf = dev_get_drvdata(chrdev_device->device);
     if(dmabuf == NULL) {
         M_ERR("dmabuf == NULL\n");
         return -ENODEV;
