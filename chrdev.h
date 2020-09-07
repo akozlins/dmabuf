@@ -77,7 +77,7 @@ void chrdev_free(struct chrdev* chrdev) {
  * @retval - errors from cdev_add and device_create
  */
 static
-struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, struct device* parent, void* drvdata) {
+struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const struct file_operations* fops, struct device* parent, void* drvdata) {
     int error;
     struct chrdev_device* chrdev_device;
 
@@ -88,6 +88,10 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, struct
     if(!(0 <= minor && minor < chrdev->count)) return ERR_PTR(-EINVAL);
 
     chrdev_device = &chrdev->devices[minor];
+
+    cdev_init(&chrdev_device->cdev, fops);
+    chrdev_device->cdev.owner = THIS_MODULE;
+    chrdev_device->cdev.dev = MKDEV(MAJOR(chrdev->dev), MINOR(chrdev->dev) + minor);
 
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
@@ -130,7 +134,7 @@ err_out:
  * @retval - errors from class_create and alloc_chrdev_region
  */
 static
-struct chrdev* chrdev_alloc(const char* name, int count, const struct file_operations* fops) {
+struct chrdev* chrdev_alloc(const char* name, int count) {
     int error;
     struct chrdev* chrdev;
 
@@ -170,14 +174,6 @@ struct chrdev* chrdev_alloc(const char* name, int count, const struct file_opera
         goto err_out;
     }
     chrdev->count = count;
-
-    for(int i = 0; i < chrdev->count; i++) {
-        struct chrdev_device* device = &chrdev->devices[i];
-
-        cdev_init(&device->cdev, fops);
-        device->cdev.owner = THIS_MODULE;
-        device->cdev.dev = MKDEV(MAJOR(chrdev->dev), MINOR(chrdev->dev) + i);
-    }
 
     return chrdev;
 

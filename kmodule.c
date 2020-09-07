@@ -19,7 +19,7 @@ int __init dmabuf_module_init(void) {
 
     M_INFO("\n");
 
-    chrdev = chrdev_alloc(THIS_MODULE->name, 2, &dmabuf_chrdev_fops);
+    chrdev = chrdev_alloc(THIS_MODULE->name, 2);
     if(IS_ERR_OR_NULL(chrdev)) {
         error = PTR_ERR(chrdev);
         chrdev = NULL;

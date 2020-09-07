@@ -29,7 +29,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    chrdev_device = chrdev_device_add(chrdev, minor, &pdev->dev, dmabuf);
+    chrdev_device = chrdev_device_add(chrdev, minor, &dmabuf_chrdev_fops, &pdev->dev, dmabuf);
     if(IS_ERR_OR_NULL(chrdev_device)) {
         error = PTR_ERR(chrdev_device);
         M_ERR("chrdev_device_create(): error = %d\n", error);
