@@ -23,7 +23,7 @@ add_custom_target(insmod
 
 
 
-add_executable(test_mmap test_mmap.cpp)
+add_executable(test_mmap test_mmap.cpp test.h)
 
 find_package(CUDA 11)
 if(CUDA_FOUND)
