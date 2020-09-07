@@ -31,6 +31,20 @@ int dmabuf_chrdev_mmap(struct file* file, struct vm_area_struct* vma) {
     return dmabuf_mmap(dmabuf, vma);
 }
 
+/**
+ * Set file->private_data pointer.
+ *
+ * \code
+ * chrdev_device = container_of(inode->cdev)
+ * dmabuf = get_drvdata(chrdev_device->device)
+ * file->private_data = dmabuf
+ * \endcode
+ *
+ * @param inode
+ * @param file
+ *
+ * @return
+ */
 static
 int dmabuf_chrdev_open(struct inode* inode, struct file* file) {
     struct chrdev_device* chrdev_device;

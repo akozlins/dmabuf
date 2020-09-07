@@ -61,7 +61,13 @@ void chrdev_free(struct chrdev* chrdev) {
 }
 
 /**
- * @param chrdev
+ * \code
+ * chrdev_device = chrdev->devices[minor]
+ * cdev_add(&chrdev_device->cdev)
+ * chrdev_device->device = device_create(parent, drvdata, "${name}${minor}")
+ * \endcode
+ *
+ * @param chrdev - pointer to struct chrdev
  * @param minor - minor number for this device
  * @param parent - parent struct device
  *
@@ -106,6 +112,13 @@ err_out:
 }
 
 /**
+ * \code
+ * chrdev = kzalloc()
+ * chrdev->class = create_calss(name)
+ * alloc_chrdev_region(&chrdev->dev, count, name)
+ * for_each(device, chrdev->devices) cdev_init(&device->cdev)
+ * \endcode
+ *
  * @param name - name of class and associated device or driver
  * @param count - required number of minor numbers
  * @param fops - file_operations for this device

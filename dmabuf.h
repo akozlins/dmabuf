@@ -84,6 +84,12 @@ void dmabuf_free(struct dmabuf* dmabuf) {
  * such that contiguous ranges can be combined
  * when passing handle and size to the device.
  *
+ * \code
+ * dmabuf = kzalloc()
+ * while(dmabuf->size < size) list_add(dma_alloc_coherent(), &dmabuf->entries)
+ * list_sort(&dmabuf->entries, (a, b) { a->dma_handle < b->dma_handle })
+ * \endcode
+ *
  * @param dev - associated struct device pointer
  * @param size - required size of the buffer
  *
@@ -191,6 +197,11 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
  *
  * Use pgprot_noncached to set page protection
  * and map each dmabuf_entry with remap_pfn_range.
+ *
+ * \code
+ * vma->vm_page_prot = pgprot_noncached()
+ * for_each(entry : dmabuf->entries) remap_pfn_range(pfn(entry->dma_handle))
+ * \endcode
  *
  * @param dmabuf - pointer to struct dmabuf
  * @param vma - pointer to struct vm_area_struct
