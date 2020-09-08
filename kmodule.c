@@ -5,11 +5,9 @@ MODULE_AUTHOR("akozlins");
 MODULE_LICENSE("GPL");
 
 #include "dmabuf_platform_device.h"
-static struct platform_device* dmabuf_platform_device = NULL;
-
-static DEFINE_IDA(chrdev_ida);
-
 #include "dmabuf_platform_driver.h"
+
+static struct platform_device* dmabuf_platform_device = NULL;
 
 static
 int __init dmabuf_module_init(void) {

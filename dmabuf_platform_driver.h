@@ -3,23 +3,25 @@
 #include <linux/miscdevice.h>
 
 struct dmabuf_miscdevice {
-    int minor;
+    int id;
     char* name;
     struct dmabuf* dmabuf;
     struct miscdevice miscdevice;
 };
+
+static DEFINE_IDA(dmabuf_miscdevice_ida);
 
 #include "dmabuf_fops.h"
 
 static
 int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     int error;
-    struct dmabuf_miscdevice* dmabuf_miscdevice;
+    struct dmabuf_miscdevice* dmabuf_miscdevice = NULL;
 
     M_INFO("\n");
 
     error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
-    if(error) {
+    if(error != 0) {
         M_ERR("dma_set_mask_and_coherent(mask = DMA_BIT_MASK(64)): error = %d\n", error);
         goto err_out;
     }
@@ -33,14 +35,14 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    dmabuf_miscdevice->minor = ida_alloc(&chrdev_ida, GFP_KERNEL);
-    if(dmabuf_miscdevice->minor < 0) {
-        error = dmabuf_miscdevice->minor;
+    dmabuf_miscdevice->id = ida_alloc(&dmabuf_miscdevice_ida, GFP_KERNEL);
+    if(dmabuf_miscdevice->id < 0) {
+        error = dmabuf_miscdevice->id;
         M_ERR("ida_alloc: error = %d\n", error);
         goto err_out;
     }
 
-    dmabuf_miscdevice->name = kasprintf(GFP_KERNEL, "%s%d", THIS_MODULE->name, dmabuf_miscdevice->minor);
+    dmabuf_miscdevice->name = kasprintf(GFP_KERNEL, "%s%d", THIS_MODULE->name, dmabuf_miscdevice->id);
     if(IS_ERR_OR_NULL(dmabuf_miscdevice->name)) {
         error = PTR_ERR(dmabuf_miscdevice->name);
         if(error == 0) error = -ENOMEM;
@@ -75,7 +77,7 @@ err_out:
     if(dmabuf_miscdevice != NULL) {
         dmabuf_free(dmabuf_miscdevice->dmabuf);
         if(dmabuf_miscdevice->name != NULL) kfree(dmabuf_miscdevice->name);
-        if(dmabuf_miscdevice->minor >= 0) ida_free(&chrdev_ida, dmabuf_miscdevice->minor);
+        if(dmabuf_miscdevice->id >= 0) ida_free(&dmabuf_miscdevice_ida, dmabuf_miscdevice->id);
         kfree(dmabuf_miscdevice);
     }
     return error;
@@ -90,9 +92,10 @@ int dmabuf_platform_driver_remove(struct platform_device* pdev) {
 
     if(dmabuf_miscdevice != NULL) {
         misc_deregister(&dmabuf_miscdevice->miscdevice);
+
         dmabuf_free(dmabuf_miscdevice->dmabuf);
         if(dmabuf_miscdevice->name != NULL) kfree(dmabuf_miscdevice->name);
-        if(dmabuf_miscdevice->minor >= 0) ida_free(&chrdev_ida, dmabuf_miscdevice->minor);
+        if(dmabuf_miscdevice->id >= 0) ida_free(&dmabuf_miscdevice_ida, dmabuf_miscdevice->id);
         kfree(dmabuf_miscdevice);
     }
 
