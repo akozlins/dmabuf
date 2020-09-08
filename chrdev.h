@@ -100,8 +100,9 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const 
 
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
-        chrdev_device->cdev.count = 0;
         M_ERR("cdev_add(minor = %d): error = %d\n", minor, error);
+        kobject_put(&chrdev_device->cdev.kobj);
+        chrdev_device->cdev.count = 0;
         goto err_out;
     }
 
