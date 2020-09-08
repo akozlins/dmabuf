@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-#include "chrdev.h"
 #include "dmabuf.h"
 
 static
@@ -47,18 +46,18 @@ int dmabuf_fops_mmap(struct file* file, struct vm_area_struct* vma) {
  */
 static
 int dmabuf_fops_open(struct inode* inode, struct file* file) {
-    struct chrdev_device* chrdev_device;
+    struct dmabuf_miscdevice* dmabuf_miscdevice;
     struct dmabuf* dmabuf;
 
     M_INFO("\n");
 
-    chrdev_device = container_of(inode->i_cdev, struct chrdev_device, cdev);
-    if(chrdev_device == NULL) {
-        M_ERR("chrdev_device == NULL\n");
+    dmabuf_miscdevice  = container_of(file->private_data, struct dmabuf_miscdevice, miscdevice);
+    if(dmabuf_miscdevice == NULL) {
+        M_ERR("dmabuf_miscdevice == NULL\n");
         return -ENODEV;
     }
 
-    dmabuf = chrdev_device->private_data;
+    dmabuf = dmabuf_miscdevice->dmabuf;
     if(dmabuf == NULL) {
         M_ERR("dmabuf == NULL\n");
         return -ENODEV;

@@ -4,6 +4,7 @@
 
 #include <linux/dma-direct.h>
 #include <linux/list_sort.h>
+#include <linux/slab.h>
 
 struct dmabuf_entry {
     size_t size;
