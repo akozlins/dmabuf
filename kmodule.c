@@ -7,7 +7,7 @@ MODULE_LICENSE("GPL");
 #include "dmabuf_platform_device.h"
 static struct platform_device* dmabuf_platform_device = NULL;
 
-#include "dmabuf_chrdev.h"
+#include "dmabuf_fops.h"
 static struct chrdev* chrdev = NULL;
 static DEFINE_IDA(chrdev_ida);
 
