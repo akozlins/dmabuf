@@ -61,9 +61,9 @@ static
 void dmabuf_free(struct dmabuf* dmabuf) {
     struct dmabuf_entry* entry;
 
-    M_INFO("\n");
-
     if(IS_ERR_OR_NULL(dmabuf)) return;
+
+    M_INFO("\n");
 
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
         M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%lx)\n", entry->dma_handle, entry->size);
@@ -104,9 +104,10 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     size_t entry_size = PAGE_SIZE << 10; // start from 1024 pages (4 MB)
     struct dmabuf* dmabuf;
 
+    if(dev == NULL) return ERR_PTR(-EFAULT);
+
     M_INFO("size = 0x%lx\n", size);
 
-    if(dev == NULL) return ERR_PTR(-EFAULT);
     if(size == 0 || !IS_ALIGNED(size, PAGE_SIZE)) {
         return ERR_PTR(-EINVAL);
     }
