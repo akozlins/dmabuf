@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.18)
 
 project(dmabuf LANGUAGES C CXX)
 
+set(MODULE_NAME dmabuf)
+
 file(GLOB MODULE_SOURCES
     kmodule.c
     *.h
@@ -9,17 +11,20 @@ file(GLOB MODULE_SOURCES
 
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(kmodule REQUIRED)
-add_kmodule(dmabuf
-    NAME dmabuf
+add_kmodule(${PROJECT_NAME}
+    NAME ${MODULE_NAME}
     ${MODULE_SOURCES}
 )
-add_dependencies(dmabuf-insmod dmabuf-rmmod)
+add_dependencies(${PROJECT_NAME}-insmod ${PROJECT_NAME}-rmmod)
 
-add_custom_target(insmod
-    COMMAND sudo chmod a+rw /dev/dmabuf0
-    VERBATIM
-    DEPENDS dmabuf-insmod
-)
+get_directory_property(parent_dir PARENT_DIRECTORY)
+if(NOT parent_dir)
+    add_custom_target(insmod
+        COMMAND sudo chmod a+rw /dev/${MODULE_NAME}0
+        VERBATIM
+        DEPENDS ${PROJECT_NAME}-insmod
+    )
+endif()
 
 
 
