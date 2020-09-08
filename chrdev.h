@@ -66,6 +66,7 @@ void chrdev_free(struct chrdev* chrdev) {
 /**
  * \code
  * chrdev_device = chrdev->devices[minor]
+ * cdev_init(&chrdev_device->cdev)
  * cdev_add(&chrdev_device->cdev)
  * chrdev_device->device = device_create(parent, drvdata, "${name}${minor}")
  * \endcode
@@ -126,7 +127,6 @@ err_out:
  * chrdev = kzalloc()
  * chrdev->class = create_calss(name)
  * alloc_chrdev_region(&chrdev->dev, count, name)
- * for_each(device, chrdev->devices) cdev_init(&device->cdev)
  * \endcode
  *
  * @param name - name of class and associated device or driver
