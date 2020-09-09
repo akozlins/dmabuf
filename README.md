@@ -15,6 +15,6 @@ can be found in `dmabuf.h`.
 The rest of the code implements the driver:
 
 - `chrdev.h` - char device handling (de/allocation)
-- `dmabuf_chrdev.h` - impl char device `fops` using stubs (from `dmabuf.h`)
+- `dmabuf_fops.h` - impl char device `fops` using stubs (from `dmabuf.h`)
 - `dmabuf_platform_device.h` - dummy device
-- `dmabuf_platform_driver.h` - driver probe (set DMA mask and create char device)
+- `dmabuf_platform_driver.h` - driver probe (set DMA mask and create misc device)

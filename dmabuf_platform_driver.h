@@ -96,6 +96,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 
     error = misc_register(&dmabuf_device->miscdevice);
     if(error != 0) {
+        dmabuf_device->miscdevice.minor = MISC_DYNAMIC_MINOR; // mark not registered
         M_ERR("misc_register(): error = %d\n", error);
         goto err_out;
     }
@@ -106,6 +107,8 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 
 err_out:
     if(dmabuf_device != NULL) {
+        if(dmabuf_device->miscdevice.minor != MISC_DYNAMIC_MINOR) misc_deregister(&dmabuf_device->miscdevice);
+
         dmabuf_free(dmabuf_device->dmabuf);
         if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
         if(dmabuf_device->id >= 0) ida_free(&dmabuf_ida, dmabuf_device->id);
@@ -122,7 +125,7 @@ int dmabuf_platform_driver_remove(struct platform_device* pdev) {
     M_INFO("\n");
 
     if(dmabuf_device != NULL) {
-        misc_deregister(&dmabuf_device->miscdevice);
+        if(dmabuf_device->miscdevice.minor != MISC_DYNAMIC_MINOR) misc_deregister(&dmabuf_device->miscdevice);
 
         dmabuf_free(dmabuf_device->dmabuf);
         if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
