@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
+#include "chrdev.h"
+
 struct dmabuf_device {
     int id;
     struct dmabuf* dmabuf;
@@ -7,6 +9,37 @@ struct dmabuf_device {
 };
 
 static DEFINE_IDA(dmabuf_ida);
+
+/**
+ * \code
+ * chrdev_device = container_of(inode->cdev)
+ * dmabuf_device = chrdev_device->private_data
+ * file->private_data = dmabuf_device->dmabuf
+ * \endcode
+ */
+static
+int dmabuf_fops_open(struct inode* inode, struct file* file) {
+    struct dmabuf_device* dmabuf_device;
+    struct dmabuf* dmabuf;
+
+    M_INFO("\n");
+
+    dmabuf_device = container_of(inode->i_cdev, struct chrdev_device, cdev)->private_data;
+    if(dmabuf_device == NULL) {
+        M_ERR("dmabuf_device == NULL\n");
+        return -ENODEV;
+    }
+
+    dmabuf = dmabuf_device->dmabuf;
+    if(dmabuf == NULL) {
+        M_ERR("dmabuf == NULL\n");
+        return -ENODEV;
+    }
+
+    file->private_data = dmabuf;
+
+    return 0;
+}
 
 #include "dmabuf_fops.h"
 
