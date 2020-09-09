@@ -46,18 +46,18 @@ int dmabuf_fops_mmap(struct file* file, struct vm_area_struct* vma) {
  */
 static
 int dmabuf_fops_open(struct inode* inode, struct file* file) {
-    struct dmabuf_miscdevice* dmabuf_miscdevice;
+    struct dmabuf_device* dmabuf_device;
     struct dmabuf* dmabuf;
 
     M_INFO("\n");
 
-    dmabuf_miscdevice  = container_of(file->private_data, struct dmabuf_miscdevice, miscdevice);
-    if(dmabuf_miscdevice == NULL) {
-        M_ERR("dmabuf_miscdevice == NULL\n");
+    dmabuf_device  = container_of(file->private_data, struct dmabuf_device, miscdevice);
+    if(dmabuf_device == NULL) {
+        M_ERR("dmabuf_device == NULL\n");
         return -ENODEV;
     }
 
-    dmabuf = dmabuf_miscdevice->dmabuf;
+    dmabuf = dmabuf_device->dmabuf;
     if(dmabuf == NULL) {
         M_ERR("dmabuf == NULL\n");
         return -ENODEV;
