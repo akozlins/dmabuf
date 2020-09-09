@@ -1,19 +1,20 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-#include "chrdev.h"
+#include <linux/fs.h>
+#include <linux/miscdevice.h>
 
 struct dmabuf_device {
     int id;
+    char* name;
     struct dmabuf* dmabuf;
-    struct chrdev_device* chrdev_device;
+    struct miscdevice miscdevice;
 };
 
 static DEFINE_IDA(dmabuf_ida);
 
 /**
  * \code
- * chrdev_device = container_of(inode->cdev)
- * dmabuf_device = chrdev_device->private_data
+ * dmabuf_device = container_of(file->private_data)
  * file->private_data = dmabuf_device->dmabuf
  * \endcode
  */
@@ -24,7 +25,7 @@ int dmabuf_fops_open(struct inode* inode, struct file* file) {
 
     M_INFO("\n");
 
-    dmabuf_device = container_of(inode->i_cdev, struct chrdev_device, cdev)->private_data;
+    dmabuf_device = container_of(file->private_data, struct dmabuf_device, miscdevice);
     if(dmabuf_device == NULL) {
         M_ERR("dmabuf_device == NULL\n");
         return -ENODEV;
@@ -65,10 +66,19 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    dmabuf_device->id = ida_alloc_range(&dmabuf_ida, 0, chrdev->count - 1, GFP_KERNEL);
+    dmabuf_device->id = ida_alloc(&dmabuf_ida, GFP_KERNEL);
     if(dmabuf_device->id < 0) {
         error = dmabuf_device->id;
-        M_ERR("ida_alloc_range: error = %d\n", error);
+        M_ERR("ida_alloc: error = %d\n", error);
+        goto err_out;
+    }
+
+    dmabuf_device->name = kasprintf(GFP_KERNEL, "%s%d", THIS_MODULE->name, dmabuf_device->id);
+    if(IS_ERR_OR_NULL(dmabuf_device->name)) {
+        error = PTR_ERR(dmabuf_device->name);
+        if(error == 0) error = -ENOMEM;
+        dmabuf_device->name = NULL;
+        M_ERR("kasprintf(): error = %d\n", error);
         goto err_out;
     }
 
@@ -79,10 +89,14 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
         goto err_out;
     }
 
-    dmabuf_device->chrdev_device = chrdev_device_add(chrdev, dmabuf_device->id, &dmabuf_fops, &pdev->dev, dmabuf_device);
-    if(IS_ERR_OR_NULL(dmabuf_device->chrdev_device)) {
-        error = PTR_ERR(dmabuf_device->chrdev_device);
-        M_ERR("chrdev_device_add(): error = %d\n", error);
+    dmabuf_device->miscdevice.minor = MISC_DYNAMIC_MINOR;
+    dmabuf_device->miscdevice.name = dmabuf_device->name;
+    dmabuf_device->miscdevice.fops = &dmabuf_fops;
+    dmabuf_device->miscdevice.parent = &pdev->dev;
+
+    error = misc_register(&dmabuf_device->miscdevice);
+    if(error != 0) {
+        M_ERR("misc_register(): error = %d\n", error);
         goto err_out;
     }
 
@@ -93,6 +107,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 err_out:
     if(dmabuf_device != NULL) {
         dmabuf_free(dmabuf_device->dmabuf);
+        if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
         if(dmabuf_device->id >= 0) ida_free(&dmabuf_ida, dmabuf_device->id);
         kfree(dmabuf_device);
     }
@@ -107,9 +122,10 @@ int dmabuf_platform_driver_remove(struct platform_device* pdev) {
     M_INFO("\n");
 
     if(dmabuf_device != NULL) {
-        chrdev_device_del(dmabuf_device->chrdev_device);
+        misc_deregister(&dmabuf_device->miscdevice);
 
         dmabuf_free(dmabuf_device->dmabuf);
+        if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
         if(dmabuf_device->id >= 0) ida_free(&dmabuf_ida, dmabuf_device->id);
         kfree(dmabuf_device);
     }
