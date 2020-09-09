@@ -30,44 +30,6 @@ int dmabuf_fops_mmap(struct file* file, struct vm_area_struct* vma) {
     return dmabuf_mmap(dmabuf, vma);
 }
 
-/**
- * Set file->private_data pointer.
- *
- * \code
- * chrdev_device = container_of(inode->cdev)
- * dmabuf = get_drvdata(chrdev_device->device)
- * file->private_data = dmabuf
- * \endcode
- *
- * @param inode
- * @param file
- *
- * @return
- */
-static
-int dmabuf_fops_open(struct inode* inode, struct file* file) {
-    struct dmabuf_device* dmabuf_device;
-    struct dmabuf* dmabuf;
-
-    M_INFO("\n");
-
-    dmabuf_device  = container_of(file->private_data, struct dmabuf_device, miscdevice);
-    if(dmabuf_device == NULL) {
-        M_ERR("dmabuf_device == NULL\n");
-        return -ENODEV;
-    }
-
-    dmabuf = dmabuf_device->dmabuf;
-    if(dmabuf == NULL) {
-        M_ERR("dmabuf == NULL\n");
-        return -ENODEV;
-    }
-
-    file->private_data = dmabuf;
-
-    return 0;
-}
-
 static
 int dmabuf_fops_release(struct inode* inode, struct file* file) {
     M_INFO("\n");

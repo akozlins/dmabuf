@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
+#include <linux/fs.h>
 #include <linux/miscdevice.h>
 
 struct dmabuf_device {
@@ -10,6 +11,36 @@ struct dmabuf_device {
 };
 
 static DEFINE_IDA(dmabuf_ida);
+
+/**
+ * \code
+ * dmabuf_device = container_of(file->private_data)
+ * file->private_data = dmabuf_device->dmabuf
+ * \endcode
+ */
+static
+int dmabuf_fops_open(struct inode* inode, struct file* file) {
+    struct dmabuf_device* dmabuf_device;
+    struct dmabuf* dmabuf;
+
+    M_INFO("\n");
+
+    dmabuf_device  = container_of(file->private_data, struct dmabuf_device, miscdevice);
+    if(dmabuf_device == NULL) {
+        M_ERR("dmabuf_device == NULL\n");
+        return -ENODEV;
+    }
+
+    dmabuf = dmabuf_device->dmabuf;
+    if(dmabuf == NULL) {
+        M_ERR("dmabuf == NULL\n");
+        return -ENODEV;
+    }
+
+    file->private_data = dmabuf;
+
+    return 0;
+}
 
 #include "dmabuf_fops.h"
 
