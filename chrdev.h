@@ -107,8 +107,9 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const 
     error = cdev_add(&chrdev_device->cdev, chrdev_device->cdev.dev, 1);
     if(error) {
         M_ERR("cdev_add(minor = %d): error = %d\n", minor, error);
+        // cdev_init calls kobject_init which must be cleaned up with kobject_put
         kobject_put(&chrdev_device->cdev.kobj);
-        chrdev_device->cdev.count = 0;
+        chrdev_device->cdev.count = 0; // mark as not initialized
         goto err_out;
     }
 
@@ -171,6 +172,7 @@ struct chrdev* chrdev_alloc(const char* name, int count) {
         goto err_out;
     }
 
+    // create /sys/class/${name}
     chrdev->class = class_create(THIS_MODULE, chrdev->name);
     if(IS_ERR_OR_NULL(chrdev->class)) {
         error = PTR_ERR(chrdev->class);
@@ -179,6 +181,7 @@ struct chrdev* chrdev_alloc(const char* name, int count) {
         goto err_out;
     }
 
+    // add entry to /proc/devices
     error = alloc_chrdev_region(&chrdev->dev, 0, count, chrdev->name);
     if(error) {
         M_ERR("alloc_chrdev_region(count = %d, name = '%s'): error = %d\n", count, name, error);

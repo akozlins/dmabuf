@@ -4,6 +4,7 @@
 
 #include <linux/dma-direct.h>
 #include <linux/list_sort.h>
+#include <linux/slab.h>
 
 struct dmabuf_entry {
     size_t size;
@@ -260,6 +261,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     return 0;
 
 err_out:
+    // kernel does the unmap in case of error
     return error;
 }
 

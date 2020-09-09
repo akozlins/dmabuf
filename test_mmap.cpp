@@ -5,7 +5,6 @@
 
 int main() {
     test_t test;
-
     size_t size = test.seek_end(), offset = 0;
 
     // init write buffer
