@@ -47,18 +47,18 @@ int dmabuf_fops_mmap(struct file* file, struct vm_area_struct* vma) {
  */
 static
 int dmabuf_fops_open(struct inode* inode, struct file* file) {
-    struct chrdev_device* chrdev_device;
+    struct dmabuf_device* dmabuf_device;
     struct dmabuf* dmabuf;
 
     M_INFO("\n");
 
-    chrdev_device = container_of(inode->i_cdev, struct chrdev_device, cdev);
-    if(chrdev_device == NULL) {
-        M_ERR("chrdev_device == NULL\n");
+    dmabuf_device = container_of(inode->i_cdev, struct chrdev_device, cdev)->private_data;
+    if(dmabuf_device == NULL) {
+        M_ERR("dmabuf_device == NULL\n");
         return -ENODEV;
     }
 
-    dmabuf = chrdev_device->private_data;
+    dmabuf = dmabuf_device->dmabuf;
     if(dmabuf == NULL) {
         M_ERR("dmabuf == NULL\n");
         return -ENODEV;
