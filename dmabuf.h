@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-#include "kmodule.h"
+#include "module.h"
 
 #include <linux/dma-direct.h>
 #include <linux/list_sort.h>

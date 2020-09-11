@@ -5,7 +5,7 @@ project(dmabuf LANGUAGES C CXX)
 set(MODULE_NAME dmabuf)
 
 file(GLOB MODULE_SOURCES
-    kmodule.c
+    module.c
     *.h
 )
 

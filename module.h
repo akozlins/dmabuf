@@ -3,7 +3,7 @@
 #ifndef __KMODULE_H__
 #define __KMODULE_H__
 
-#include <linux/printk.h>
+#include <linux/module.h>
 
 #define M_ERR(fmt, ...) \
     pr_err("[%s/%s] " pr_fmt(fmt), THIS_MODULE->name, __FUNCTION__, ##__VA_ARGS__)
