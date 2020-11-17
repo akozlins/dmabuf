@@ -1,11 +1,12 @@
 
-execute_process(OUTPUT_VARIABLE KMODULE_KERNEL_RELEASE
-    COMMAND uname --kernel-release
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-if(KMODULE_KERNEL_RELEASE STREQUAL "")
-    message(FATAL_ERROR "`uname --kernel-release`")
+if(NOT KMODULE_KERNEL_RELEASE)
+    execute_process(OUTPUT_VARIABLE KMODULE_KERNEL_RELEASE
+        COMMAND uname --kernel-release
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(KMODULE_KERNEL_RELEASE STREQUAL "")
+        message(FATAL_ERROR "`uname --kernel-release`")
+    endif()
 endif()
 
 include(FindPackageHandleStandardArgs)
