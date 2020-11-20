@@ -11,6 +11,17 @@ void cuda_assert(cudaError_t cudaError, const char* function, const char* file, 
 
 #define CUDA_ASSERT(cudaError) do { cuda_assert((cudaError), __FUNCTION__, __FILE__, __LINE__); } while(0)
 
+struct cuda_t {
+    int device = 0;
+
+    cudaDeviceProp properties;
+
+    cuda_t() {
+        CUDA_ASSERT(cudaSetDevice(device));
+        CUDA_ASSERT(cudaGetDeviceProperties(&properties, device));
+    }
+};
+
 __global__
 void kernel1(uint32_t* values) {
     uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -20,18 +31,15 @@ void kernel1(uint32_t* values) {
 
 __host__
 int main() {
-    int device = 0;
-    CUDA_ASSERT(cudaSetDevice(device));
+    cuda_t cuda;
     CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost));
-    cudaDeviceProp deviceProperties;
-    CUDA_ASSERT(cudaGetDeviceProperties(&deviceProperties, device));
 
     test_t test;
     ssize_t size = test.seek_end(), offset = 0;
     test.mmap(size, offset);
 
     int nThreadsPerBlock = 1;
-    while(2 * nThreadsPerBlock <= deviceProperties.maxThreadsPerBlock) nThreadsPerBlock *= 2;
+    while(2 * nThreadsPerBlock <= cuda.properties.maxThreadsPerBlock) nThreadsPerBlock *= 2;
     int nBlocks = size/4 / nThreadsPerBlock;
     printf("I [] nThreadsPerBlock = %d, nBlocks = %d\n", nThreadsPerBlock, nBlocks);
 
