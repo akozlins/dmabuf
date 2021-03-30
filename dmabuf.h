@@ -15,12 +15,16 @@
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
-static int ida_alloc(struct ida* ida, gfp_t gfp) {
-    return ida_simple_get(ida, 0, ~0, gfp);
+static int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max, gfp_t gfp) {
+    return ida_simple_get(ida, min, max + 1, gfp);
 }
 
 static void ida_free(struct ida* ida, unsigned int id) {
     ida_simple_remove(ida, id);
+}
+
+static int ida_alloc(struct ida* ida, gfp_t gfp) {
+    return ida_alloc_range(ida, 0, ~0, gfp);
 }
 #endif
 
