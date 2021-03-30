@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+#ifndef _AKOZLINS_DMABUF_H
+#define _AKOZLINS_DMABUF_H
 
 #include "module.h"
 
@@ -9,6 +11,16 @@
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0) // `dma_to_phys`
 #include <linux/dma-direct.h>
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
+static int ida_alloc(struct ida* ida, gfp_t gfp) {
+    return ida_simple_get(ida, 0, ~0, gfp);
+}
+
+static void ida_free(struct ida* ida, unsigned int id) {
+    ida_simple_remove(ida, id);
+}
 #endif
 
 struct dmabuf_entry {
@@ -329,3 +341,5 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
 
     return n;
 }
+
+#endif // _AKOZLINS_DMABUF_H

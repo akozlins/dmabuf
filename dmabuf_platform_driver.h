@@ -1,4 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+#ifndef _AKOZLINS_DMABUF_PLATFORM_DRIVER_H
+#define _AKOZLINS_DMABUF_PLATFORM_DRIVER_H
+
+#include "dmabuf.h"
 
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
@@ -145,3 +149,5 @@ struct platform_driver dmabuf_platform_driver = {
         .name  = THIS_MODULE->name,
     },
 };
+
+#endif // _AKOZLINS_DMABUF_PLATFORM_DRIVER_H
