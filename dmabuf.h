@@ -2,9 +2,14 @@
 
 #include "module.h"
 
-#include <linux/dma-direct.h>
+#include <linux/dma-mapping.h>
 #include <linux/list_sort.h>
 #include <linux/slab.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0) // `dma_to_phys`
+#include <linux/dma-direct.h>
+#endif
 
 struct dmabuf_entry {
     size_t size;
