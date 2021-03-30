@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 
 if(NOT KMODULE_KERNEL_RELEASE)
     execute_process(OUTPUT_VARIABLE KMODULE_KERNEL_RELEASE
