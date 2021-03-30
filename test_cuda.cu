@@ -5,7 +5,7 @@ inline
 void cuda_assert(cudaError_t cudaError, const char* function, const char* file, int line, bool abort = true) {
     if(cudaError == cudaSuccess) return;
 
-    fprintf(stderr, "[%s] %s:%d, cudaError = %d (%s)\n", function, file, line, cudaError, cudaGetErrorString(cudaError));
+    fprintf(stderr, "F [%s] %s:%d, cudaError = %d (%s)\n", function, file, line, cudaError, cudaGetErrorString(cudaError));
     if(abort) exit(EXIT_FAILURE);
 }
 
@@ -41,7 +41,7 @@ int main() {
     int nThreadsPerBlock = 1;
     while(2 * nThreadsPerBlock <= cuda.properties.maxThreadsPerBlock) nThreadsPerBlock *= 2;
     int nBlocks = size/4 / nThreadsPerBlock;
-    printf("I [] nThreadsPerBlock = %d, nBlocks = %d\n", nThreadsPerBlock, nBlocks);
+    INFO("nThreadsPerBlock = %d, nBlocks = %d\n", nThreadsPerBlock, nBlocks);
 
     uint32_t* wvalues;
 //    wvalues = (uint32_t*)malloc(size);
@@ -52,14 +52,14 @@ int main() {
 
     // allocate device memory
     uint32_t* values_d;
-    printf("I [] cudaMalloc\n");
+    INFO("cudaMalloc\n");
     cudaMalloc(&values_d, size);
 
-    printf("I [] cudaMemcpy\n");
+    INFO("cudaMemcpy\n");
     cudaMemcpy(values_d, wvalues, size, cudaMemcpyHostToDevice);
 
     // call kernel
-    printf("I [] kernel1\n");
+    INFO("kernel1\n");
     kernel1<<<nBlocks, nThreadsPerBlock>>>(values_d);
 
     // allocate host memory
@@ -68,6 +68,7 @@ int main() {
 //    cudaMallocHost(&rvalues, size);
 
     // copy values from device to host
+    INFO("cudaMemcpy\n");
     cudaMemcpy(rvalues, values_d, size, cudaMemcpyDeviceToHost);
 
     // check values
@@ -75,9 +76,9 @@ int main() {
     for(int i = 0; i < size/4; i++) {
         if(rvalues[i] == ~wvalues[i]) continue;
         error = 1;
-        printf("E [%s] rvalues[%d] = %d\n", __FUNCTION__, i, rvalues[i]);
+        ERR("rvalues[%d] = %d\n", i, rvalues[i]);
     }
-    if(error == 0) printf("I [%s] OK\n", __FUNCTION__);
+    if(error == 0) INFO("OK\n");
 
     return 0;
 }

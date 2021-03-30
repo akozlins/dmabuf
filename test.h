@@ -11,9 +11,13 @@
 #include <cstdint>
 #include <cstdlib>
 
-#define INFO(fmt, ...) printf("I [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
-#define ERR(fmt, ...) printf("E [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
-#define FATAL(fmt, ...) printf("F [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define SGR_RED "\033[0;0;31m"
+#define SGR_GREEN "\033[0;0;32m"
+#define SGR_RESET "\033[0m"
+
+#define INFO(fmt, ...) printf(SGR_GREEN "I" SGR_RESET " [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define ERR(fmt, ...) printf(SGR_RED "E" SGR_RESET " [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define FATAL(fmt, ...) printf(SGR_RED "F" SGR_RESET " [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
 
 struct test_t {
     int fd = -1;
