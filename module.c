@@ -10,6 +10,16 @@ MODULE_LICENSE("GPL");
 static struct platform_device* dmabuf_platform_device = NULL;
 
 static
+ssize_t test_show(struct device_driver* device_driver, char* page) {
+    return scnprintf(page, PAGE_SIZE, "test_attribute\n");
+}
+static
+ssize_t test_store(struct device_driver* device_driver, const char* page, size_t size) {
+    return size;
+}
+static DRIVER_ATTR_RW(test);
+
+static
 int __init dmabuf_module_init(void) {
     int error;
 
@@ -20,6 +30,8 @@ int __init dmabuf_module_init(void) {
         M_ERR("platform_driver_register: error = %d\n", error);
         goto err_out;
     }
+
+    driver_create_file(&dmabuf_platform_driver.driver, &driver_attr_test);
 
     dmabuf_platform_device = dmabuf_platform_device_register(THIS_MODULE->name);
     if(IS_ERR_OR_NULL(dmabuf_platform_device)) {
