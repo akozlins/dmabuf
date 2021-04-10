@@ -40,7 +40,7 @@ struct test_t {
     }
 
     ssize_t seek_set(ssize_t offset = 0) const {
-        INFO("offset = 0x%lx\n", offset);
+        INFO("offset = 0x%zx\n", offset);
         ssize_t pos = lseek(fd, offset, SEEK_SET);
         if(pos < 0) {
             FATAL("lseek(SEEK_SET) < 0\n");
@@ -50,7 +50,7 @@ struct test_t {
     }
 
     ssize_t seek_end(ssize_t offset = 0) const {
-        INFO("offset = 0x%lx\n", offset);
+        INFO("offset = 0x%zx\n", offset);
         ssize_t pos = lseek(fd, offset, SEEK_END);
         if(pos < 0) {
             FATAL("lseek(SEEK_END) < 0\n");
@@ -60,7 +60,7 @@ struct test_t {
     }
 
     void mmap(size_t size, size_t offset) {
-        INFO("size = 0x%lx, offset = 0x%lx\n", size, offset);
+        INFO("size = 0x%zx, offset = 0x%zx\n", size, offset);
         addr = (uint32_t*)::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
         if(addr == MAP_FAILED) {
             FATAL("mmap: errno = %d\n", errno);
@@ -69,19 +69,19 @@ struct test_t {
     }
 
     void read(void* buffer, size_t size) const {
-        INFO("size = 0x%lx\n", size);
+        INFO("size = 0x%zx\n", size);
         ssize_t n = ::read(fd, buffer, size);
         if(n != size) {
-            FATAL("read: n = 0x%lx\n", n);
+            FATAL("read: n = 0x%zx\n", n);
             exit(EXIT_FAILURE);
         }
     }
 
     void write(const void* buffer, size_t size) const {
-        INFO("size = 0x%lx\n", size);
+        INFO("size = 0x%zx\n", size);
         ssize_t n = ::write(fd, buffer, size);
         if(n != size) {
-            FATAL("write: n = 0x%lx\n", n);
+            FATAL("write: n = 0x%zx\n", n);
             exit(EXIT_FAILURE);
         }
     }

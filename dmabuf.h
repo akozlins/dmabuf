@@ -74,7 +74,7 @@ int dmabuf_report(struct dmabuf* dmabuf) {
             entry = next;
         }
         n++;
-        M_INFO("dma_handle = 0x%llx, size = 0x%lx", dma_handle, size);
+        M_INFO("dma_handle = 0x%llx, size = 0x%zx", dma_handle, size);
     }
 
     return n;
@@ -89,7 +89,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
     M_INFO("\n");
 
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
-        M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%lx)\n", entry->dma_handle, entry->size);
+        M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%zx)\n", entry->dma_handle, entry->size);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
         kfree(entry);
     }
@@ -129,7 +129,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
 
     if(dev == NULL) return ERR_PTR(-EFAULT);
 
-    M_INFO("size = 0x%lx\n", size);
+    M_INFO("size = 0x%zx\n", size);
 
     if(size == 0 || !IS_ALIGNED(size, PAGE_SIZE)) {
         return ERR_PTR(-EINVAL);
@@ -157,12 +157,12 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
 
 retry_alloc:
         entry->size = entry_size;
-        M_DEBUG("dma_alloc_coherent(size = 0x%lx)\n", entry->size);
+        M_DEBUG("dma_alloc_coherent(size = 0x%zx)\n", entry->size);
         entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry->size, &entry->dma_handle, GFP_ATOMIC | __GFP_NOWARN); // see `pci_alloc_consistent`
         if(IS_ERR_OR_NULL(entry->cpu_addr)) {
             error = PTR_ERR(entry->cpu_addr);
             if(error == 0) error = -ENOMEM;
-            M_ERR("dma_alloc_coherent(size = 0x%lx): error = %d\n", entry->size, error);
+            M_ERR("dma_alloc_coherent(size = 0x%zx): error = %d\n", entry->size, error);
             if(entry_size > PAGE_SIZE) {
                 // reduce allocation order and try again
                 entry_size /= 2;
@@ -245,7 +245,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     if(dmabuf == NULL) return -EFAULT;
 
-    M_INFO("vma_size = 0x%lx, offset = 0x%lx\n", vma_size, offset);
+    M_INFO("vma_size = 0x%zx, offset = 0x%zx\n", vma_size, offset);
 
     if(offset > dmabuf->size) return -EINVAL;
     if(vma_size > dmabuf->size - offset) return -EINVAL;
@@ -266,10 +266,10 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
 
-        M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%lx)\n", pfn, size);
+        M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%zx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
         if(error) {
-            M_ERR("remap_pfn_range(pfn = 0x%lx, size = 0x%lx): error = %d\n", pfn, size, error);
+            M_ERR("remap_pfn_range(pfn = 0x%lx, size = 0x%zx): error = %d\n", pfn, size, error);
             goto err_out;
         }
 
@@ -303,9 +303,9 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
         if(user_size < size) size = user_size;
         if(size == 0) break;
 
-        M_DEBUG("copy_to_user(size = 0x%lx)\n", size);
+        M_DEBUG("copy_to_user(size = 0x%zx)\n", size);
         if(copy_to_user(user_buffer, entry->cpu_addr + offset, size)) {
-            M_ERR("copy_to_user(size = 0x%lx) != 0\n", size);
+            M_ERR("copy_to_user(size = 0x%zx) != 0\n", size);
             return -EFAULT;
         }
         n += size;
@@ -333,9 +333,9 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
         if(user_size < size) size = user_size;
         if(size == 0) break;
 
-        M_DEBUG("copy_from_user(size = 0x%lx)\n", size);
+        M_DEBUG("copy_from_user(size = 0x%zx)\n", size);
         if(copy_from_user(entry->cpu_addr + offset, user_buffer, size)) {
-            M_ERR("copy_from_user(size = 0x%lx) != 0\n", size);
+            M_ERR("copy_from_user(size = 0x%zx) != 0\n", size);
             return -EFAULT;
         }
         n += size;
