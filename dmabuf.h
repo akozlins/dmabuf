@@ -82,13 +82,14 @@ int dmabuf_report(struct dmabuf* dmabuf) {
 
 static
 void dmabuf_free(struct dmabuf* dmabuf) {
-    struct dmabuf_entry* entry;
+    struct dmabuf_entry* entry, *tmp;
 
     if(IS_ERR_OR_NULL(dmabuf)) return;
 
     M_INFO("\n");
 
-    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+    list_for_each_entry_safe(entry, tmp, &dmabuf->entries, list_head) {
+        list_del(&entry->list_head);
         M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%zx)\n", entry->dma_handle, entry->size);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
         kfree(entry);
