@@ -42,7 +42,7 @@ struct dmabuf {
 };
 
 static
-int dmabuf_entry_cmp(void* priv, struct list_head* a, struct list_head* b) {
+int dmabuf_entry_cmp(void* priv, const struct list_head* a, const struct list_head* b) {
     dma_addr_t aa = container_of(a, struct dmabuf_entry, list_head)->dma_handle;
     dma_addr_t bb = container_of(b, struct dmabuf_entry, list_head)->dma_handle;
     if(aa < bb) return -1;
