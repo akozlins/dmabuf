@@ -42,7 +42,11 @@ struct dmabuf {
 };
 
 static
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 70) // use const
 int dmabuf_entry_cmp(void* priv, const struct list_head* a, const struct list_head* b) {
+#else
+int dmabuf_entry_cmp(void* priv, struct list_head* a, struct list_head* b) {
+#endif
     dma_addr_t aa = container_of(a, struct dmabuf_entry, list_head)->dma_handle;
     dma_addr_t bb = container_of(b, struct dmabuf_entry, list_head)->dma_handle;
     if(aa < bb) return -1;
