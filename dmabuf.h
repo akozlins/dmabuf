@@ -13,6 +13,9 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0) // `dma_to_phys`
 #include <linux/dma-direct.h>
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) // `dma-map-ops.h`
+#include <linux/dma-map-ops.h>
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
 static int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max, gfp_t gfp) {
@@ -228,7 +231,7 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
  * and map each dmabuf_entry with remap_pfn_range.
  *
  * \code
- * vma->vm_page_prot = pgprot_noncached()
+ * vma->vm_page_prot = pgprot_dmacoherent()
  * for_each(entry : dmabuf->entries) remap_pfn_range(pfn(entry->dma_handle))
  * \endcode
  *
@@ -256,8 +259,13 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     if(vma_size > dmabuf->size - offset) return -EINVAL;
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
-    // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
-    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
+    // <https://www.kernel.org/doc/html/latest/x86/pat.html>
+    // <https://elixir.bootlin.com/linux/latest/source/include/linux/dma-map-ops.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) // `dma-map-ops.h`
+    vma->vm_page_prot = pgprot_dmacoherent(vma->vm_page_prot);
+#else
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+#endif
 
     // the mm semaphore is already held (by mmap)
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
