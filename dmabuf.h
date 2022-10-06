@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef _AKOZLINS_DMABUF_H
-#define _AKOZLINS_DMABUF_H
+#ifndef __AKOZLINS_DMABUF_H
+#define __AKOZLINS_DMABUF_H
 
 #include "module.h"
 
@@ -352,4 +352,4 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
     return n;
 }
 
-#endif // _AKOZLINS_DMABUF_H
+#endif // __AKOZLINS_DMABUF_H

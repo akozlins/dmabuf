@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+#ifndef __AKOZLINS_DMABUF_HCHRDEV_H__
+#define __AKOZLINS_DMABUF_HCHRDEV_H__
 
 #include "module.h"
 
@@ -195,3 +197,5 @@ err_out:
     chrdev_free(chrdev);
     return ERR_PTR(error);
 }
+
+#endif // __AKOZLINS_DMABUF_HCHRDEV_H__
