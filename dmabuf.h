@@ -259,17 +259,17 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     // see `https://www.kernel.org/doc/html/latest/x86/pat.html#advanced-apis-for-drivers`
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot); // see `pgprot_dmacoherent`
 
-    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do skip
-        if(offset < entry->size) break;
-        offset -= entry->size;
-    }
     // the mm semaphore is already held (by mmap)
-    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // do mmap
-        unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle + offset)); // see `dma_direct_mmap`
-
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        if(offset >= entry->size) {
+            offset -= entry->size;
+            continue;
+        }
         size_t size = entry->size - offset;
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
+
+        unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle + offset)); // see `dma_direct_mmap`
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%zx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
@@ -299,11 +299,11 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
 
     if(dmabuf == NULL) return -EFAULT;
 
-    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do skip
-        if(offset < entry->size) break;
-        offset -= entry->size;
-    }
-    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // do copy
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        if(offset >= entry->size) {
+            offset -= entry->size;
+            continue;
+        }
         size_t size = entry->size - offset;
         if(user_size < size) size = user_size;
         if(size == 0) break;
@@ -329,11 +329,11 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
 
     if(dmabuf == NULL) return -EFAULT;
 
-    list_for_each_entry(entry, &dmabuf->entries, list_head) { // do skip
-        if(offset < entry->size) break;
-        offset -= entry->size;
-    }
-    list_for_each_entry_from(entry, &dmabuf->entries, list_head) { // do copy
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        if(offset >= entry->size) {
+            offset -= entry->size;
+            continue;
+        }
         size_t size = entry->size - offset;
         if(user_size < size) size = user_size;
         if(size == 0) break;
