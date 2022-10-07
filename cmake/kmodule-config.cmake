@@ -9,6 +9,7 @@ if(NOT KMODULE_KERNEL_RELEASE)
         message(FATAL_ERROR "`uname --kernel-release`")
     endif()
 endif()
+#message("KMODULE_KERNEL_RELEASE: ${KMODULE_KERNEL_RELEASE}")
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(kmodule
@@ -28,6 +29,8 @@ set(KMODULE_INCLUDE_DIRECTORIES
     ${KMODULE_KDIR}/arch/x86/include/generated/uapi
 )
 set(KMODULE_COMPILE_DEFINITIONS
+    -nostdinc
+    -include ${KMODULE_KDIR}/include/linux/compiler_version.h
     -include ${KMODULE_KDIR}/include/linux/kconfig.h
     -include ${KMODULE_KDIR}/include/linux/compiler_types.h
     -D__KERNEL__
@@ -50,9 +53,9 @@ function(add_kmodule TARGET_NAME)
 
     add_custom_command(OUTPUT ${MODULE_NAME}.ko
         COMMAND
-            $(MAKE) -C ${KMODULE_KDIR} clean modules
+            make -C ${KMODULE_KDIR} clean modules
             M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
-            MODULE_NAME=${TARGET_NAME}
+            MODULE_NAME=${MODULE_NAME}
             W=1
         VERBATIM
         DEPENDS Kbuild ${MODULE_SOURCES}
@@ -82,8 +85,9 @@ function(add_kmodule TARGET_NAME)
     )
     target_compile_options(${TARGET_NAME}-ide PRIVATE
         ${KMODULE_COMPILE_DEFINITIONS}
-        -DKBUILD_BASENAME="${MODULE_NAME}"
+        -DKBUILD_BASENAME="${TARGET_NAME}"
         -DKBUILD_MODNAME="${MODULE_NAME}"
+        -D__KBUILD_MODNAME="kmod_${MODULE_NAME}"
     )
 
 endfunction()

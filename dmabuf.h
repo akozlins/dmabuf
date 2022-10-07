@@ -81,7 +81,7 @@ int dmabuf_report(struct dmabuf* dmabuf) {
             entry = next;
         }
         n++;
-        M_INFO("dma_handle = 0x%llx, size = 0x%zx", dma_handle, size);
+        M_INFO("dma_handle = 0x%pad, size = 0x%zx", &dma_handle, size);
     }
 
     return n;
@@ -97,7 +97,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 
     list_for_each_entry_safe(entry, tmp, &dmabuf->entries, list_head) {
         list_del(&entry->list_head);
-        M_DEBUG("dma_free_coherent(dma_handle = 0x%llx, size = 0x%zx)\n", entry->dma_handle, entry->size);
+        M_DEBUG("dma_free_coherent(dma_handle = 0x%pad, size = 0x%zx)\n", &entry->dma_handle, entry->size);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
         kfree(entry);
     }
@@ -259,6 +259,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     if(vma_size > dmabuf->size - offset) return -EINVAL;
 
     vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
+    M_DEBUG("vma->vm_flags = %pGv", &vma->vm_flags);
     // <https://www.kernel.org/doc/html/latest/x86/pat.html>
     // <https://elixir.bootlin.com/linux/latest/source/include/linux/dma-map-ops.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) // `dma-map-ops.h`
@@ -269,11 +270,12 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     // the mm semaphore is already held (by mmap)
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        size_t size;
         if(offset >= entry->size) {
             offset -= entry->size;
             continue;
         }
-        size_t size = entry->size - offset;
+        size = entry->size - offset;
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
 
@@ -308,11 +310,12 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
     if(dmabuf == NULL) return -EFAULT;
 
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        size_t size;
         if(offset >= entry->size) {
             offset -= entry->size;
             continue;
         }
-        size_t size = entry->size - offset;
+        size = entry->size - offset;
         if(user_size < size) size = user_size;
         if(size == 0) break;
 
@@ -338,11 +341,12 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
     if(dmabuf == NULL) return -EFAULT;
 
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        size_t size;
         if(offset >= entry->size) {
             offset -= entry->size;
             continue;
         }
-        size_t size = entry->size - offset;
+        size = entry->size - offset;
         if(user_size < size) size = user_size;
         if(size == 0) break;
 

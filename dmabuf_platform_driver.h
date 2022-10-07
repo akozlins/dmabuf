@@ -6,6 +6,7 @@
 
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
+#include <linux/platform_device.h>
 
 struct dmabuf_device {
     int id;

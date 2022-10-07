@@ -9,6 +9,9 @@ file(GLOB MODULE_SOURCES
     *.h
 )
 
+# `uname --kernel-release`
+#set(KMODULE_KERNEL_RELEASE ...)
+
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(kmodule REQUIRED)
 add_kmodule(${PROJECT_NAME}

@@ -110,6 +110,7 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const 
     if(error) {
         M_ERR("cdev_add(minor = %d): error = %d\n", minor, error);
         // cdev_init calls kobject_init which must be cleaned up with kobject_put
+        // (see __register_chrdev)
         kobject_put(&chrdev_device->cdev.kobj);
         chrdev_device->cdev.count = 0; // mark as not initialized
         goto err_out;

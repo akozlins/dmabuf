@@ -11,6 +11,7 @@ clean : .cache
 
 insmod : | all rmmod
 	sudo insmod .cache/$(MODULE_NAME).ko
+#	$(MAKE) -C $(KDIR) M=$(PWD)/.cache modules_install
 
 rmmod :
 	sudo rmmod $(MODULE_NAME) || true

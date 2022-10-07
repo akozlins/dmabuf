@@ -1,3 +1,4 @@
+//
 
 #include "test.h"
 
@@ -33,6 +34,11 @@ __host__
 int main() {
     cuda_t cuda;
     CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost));
+
+    INFO("pageableMemoryAccess = %d\n", cuda.properties.pageableMemoryAccess);
+    int hostRegisterSupported = 0;
+    CUDA_ASSERT(cudaDeviceGetAttribute(&hostRegisterSupported, cudaDevAttrHostRegisterSupported, cuda.device));
+    INFO("hostRegisterSupported = %d\n", hostRegisterSupported);
 
     test_t test;
     ssize_t size = test.seek_end(), offset = 0;
