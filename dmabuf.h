@@ -17,6 +17,17 @@
 #include <linux/dma-map-ops.h>
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) // `vm_flags_set`
+static inline
+void vm_flags_set(struct vm_area_struct* vma, vm_flags_t flags) {
+    vma->vm_flags |= flags;
+}
+static inline
+void vm_flags_clear(struct vm_area_struct* vma, vm_flags_t flags) {
+    vma->vm_flags &= ~flags;
+}
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
 static int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max, gfp_t gfp) {
     return ida_simple_get(ida, min, max + 1, gfp);
@@ -258,7 +269,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     if(offset > dmabuf->size) return -EINVAL;
     if(vma_size > dmabuf->size - offset) return -EINVAL;
 
-    vma->vm_flags |= VM_LOCKED | VM_IO | VM_DONTEXPAND;
+    vm_flags_set(vma, VM_LOCKED | VM_IO | VM_DONTEXPAND);
     M_DEBUG("vma->vm_flags = %pGv", &vma->vm_flags);
     // <https://www.kernel.org/doc/html/latest/x86/pat.html>
     // <https://elixir.bootlin.com/linux/latest/source/include/linux/dma-map-ops.h>
