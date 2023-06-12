@@ -294,7 +294,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
 
-        pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle + offset)); // see `dma_direct_mmap`
+        pfn = page_to_pfn(virt_to_page(entry->cpu_addr + offset)); // see `dma_common_mmap`
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%zx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
