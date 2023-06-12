@@ -29,15 +29,18 @@ void vm_flags_clear(struct vm_area_struct* vma, vm_flags_t flags) {
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
-static int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max, gfp_t gfp) {
+static inline
+int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max, gfp_t gfp) {
     return ida_simple_get(ida, min, max + 1, gfp);
 }
 
-static void ida_free(struct ida* ida, unsigned int id) {
+static inline
+void ida_free(struct ida* ida, unsigned int id) {
     ida_simple_remove(ida, id);
 }
 
-static int ida_alloc(struct ida* ida, gfp_t gfp) {
+static inline
+int ida_alloc(struct ida* ida, gfp_t gfp) {
     return ida_alloc_range(ida, 0, ~0, gfp);
 }
 #endif
@@ -281,6 +284,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     // the mm semaphore is already held (by mmap)
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        unsigned long pfn;
         size_t size;
         if(offset >= entry->size) {
             offset -= entry->size;
@@ -290,7 +294,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
 
-        unsigned long pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle + offset)); // see `dma_direct_mmap`
+        pfn = PHYS_PFN(dma_to_phys(dmabuf->dev, entry->dma_handle + offset)); // see `dma_direct_mmap`
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%zx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
@@ -331,7 +335,7 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
         if(size == 0) break;
 
         M_DEBUG("copy_to_user(size = 0x%zx)\n", size);
-        if(copy_to_user(user_buffer, entry->cpu_addr + offset, size)) {
+        if(copy_to_user(user_buffer, entry->cpu_addr + offset, size) != 0) {
             M_ERR("copy_to_user(size = 0x%zx) != 0\n", size);
             return -EFAULT;
         }
@@ -362,7 +366,7 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
         if(size == 0) break;
 
         M_DEBUG("copy_from_user(size = 0x%zx)\n", size);
-        if(copy_from_user(entry->cpu_addr + offset, user_buffer, size)) {
+        if(copy_from_user(entry->cpu_addr + offset, user_buffer, size) != 0) {
             M_ERR("copy_from_user(size = 0x%zx) != 0\n", size);
             return -EFAULT;
         }

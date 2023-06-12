@@ -9,7 +9,7 @@ if(NOT KMODULE_KERNEL_RELEASE)
         message(FATAL_ERROR "`uname --kernel-release`")
     endif()
 endif()
-#message("KMODULE_KERNEL_RELEASE: ${KMODULE_KERNEL_RELEASE}")
+message(STATUS "[dmabuf] KMODULE_KERNEL_RELEASE: ${KMODULE_KERNEL_RELEASE}")
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(kmodule
@@ -17,25 +17,10 @@ find_package_handle_standard_args(kmodule
 )
 
 set(KMODULE_KDIR "/lib/modules/${KMODULE_KERNEL_RELEASE}/build")
-
-set(KMODULE_INCLUDE_DIRECTORIES
-    ${KMODULE_KDIR}/include
-    ${KMODULE_KDIR}/include/uapi
-    ${KMODULE_KDIR}/include/generated
-    ${KMODULE_KDIR}/include/generated/uapi
-    ${KMODULE_KDIR}/arch/x86/include
-    ${KMODULE_KDIR}/arch/x86/include/uapi
-    ${KMODULE_KDIR}/arch/x86/include/generated
-    ${KMODULE_KDIR}/arch/x86/include/generated/uapi
-)
-set(KMODULE_COMPILE_DEFINITIONS
-    -nostdinc
-    -include ${KMODULE_KDIR}/include/linux/compiler_version.h
-    -include ${KMODULE_KDIR}/include/linux/kconfig.h
-    -include ${KMODULE_KDIR}/include/linux/compiler_types.h
-    -D__KERNEL__
-    -DMODULE
-)
+if(NOT EXISTS "${KMODULE_KDIR}")
+    message(FATAL_ERROR "[dmabuf] '${KMODULE_KDIR}' not found")
+endif()
+message(STATUS "[dmabuf] KMODULE_KDIR: ${KMODULE_KDIR}")
 
 function(add_kmodule TARGET_NAME)
 
@@ -56,7 +41,7 @@ function(add_kmodule TARGET_NAME)
             make -C ${KMODULE_KDIR} clean modules
             M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR}
             MODULE_NAME=${MODULE_NAME}
-            W=1
+            W=1 KBUILD_VERBOSE=1
         VERBATIM
         DEPENDS Kbuild ${MODULE_SOURCES}
     )
@@ -81,12 +66,25 @@ function(add_kmodule TARGET_NAME)
         ${MODULE_SOURCES}
     )
     target_include_directories(${TARGET_NAME}-ide SYSTEM PRIVATE
-        ${KMODULE_INCLUDE_DIRECTORIES}
+        "${KMODULE_KDIR}/include"
+        "${KMODULE_KDIR}/include/uapi"
+        "${KMODULE_KDIR}/include/generated"
+        "${KMODULE_KDIR}/include/generated/uapi"
+        "${KMODULE_KDIR}/arch/x86/include"
+        "${KMODULE_KDIR}/arch/x86/include/uapi"
+        "${KMODULE_KDIR}/arch/x86/include/generated"
+        "${KMODULE_KDIR}/arch/x86/include/generated/uapi"
     )
     target_compile_options(${TARGET_NAME}-ide PRIVATE
-        ${KMODULE_COMPILE_DEFINITIONS}
-        -DKBUILD_BASENAME="${TARGET_NAME}"
-        -DKBUILD_MODNAME="${MODULE_NAME}"
+        -std=gnu11
+        -nostdinc
+        -include "${KMODULE_KDIR}/include/linux/compiler_version.h"
+        -include "${KMODULE_KDIR}/include/linux/kconfig.h"
+        -include "${KMODULE_KDIR}/include/linux/compiler_types.h"
+        -D__KERNEL__
+        -DMODULE
+        -DKBUILD_BASENAME="\"${TARGET_NAME}\""
+        -DKBUILD_MODNAME="\"${MODULE_NAME}\""
         -D__KBUILD_MODNAME="kmod_${MODULE_NAME}"
     )
 
