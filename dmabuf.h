@@ -146,7 +146,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 static
 struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     int error;
-    size_t entry_size = PAGE_SIZE << 10; // start from 1024 pages (4 MB)
+    size_t entry_size = min(PMD_SIZE, PAGE_SIZE << 12); // start from 4096 pages (16 MB)
     struct dmabuf* dmabuf;
 
     if(dev == NULL) return ERR_PTR(-EFAULT);
