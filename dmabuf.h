@@ -28,7 +28,7 @@ void vm_flags_clear(struct vm_area_struct* vma, vm_flags_t flags) {
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0) // `ida_alloc_range`
 static inline
 int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max, gfp_t gfp) {
     return ida_simple_get(ida, min, max + 1, gfp);
@@ -88,6 +88,7 @@ int dmabuf_report(struct dmabuf* dmabuf) {
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
         dma_addr_t dma_handle = entry->dma_handle;
         size_t size = entry->size;
+        // report consecutive entries as one entry
         while(!list_is_last(&entry->list_head, &dmabuf->entries)) {
             typeof(entry) next = list_next_entry(entry, list_head);
             if(dma_handle + size != next->dma_handle) break;
@@ -95,7 +96,7 @@ int dmabuf_report(struct dmabuf* dmabuf) {
             entry = next;
         }
         n++;
-        M_INFO("dma_handle = 0x%pad, size = 0x%zx", &dma_handle, size);
+        M_INFO("dma_handle = %pad, size = 0x%zx", &dma_handle, size);
     }
 
     return n;
@@ -111,7 +112,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 
     list_for_each_entry_safe(entry, tmp, &dmabuf->entries, list_head) {
         list_del(&entry->list_head);
-        M_DEBUG("dma_free_coherent(dma_handle = 0x%pad, size = 0x%zx)\n", &entry->dma_handle, entry->size);
+        M_DEBUG("dma_free_coherent(dma_handle = %pad, size = 0x%zx)\n", &entry->dma_handle, entry->size);
         dma_free_coherent(dmabuf->dev, entry->size, entry->cpu_addr, entry->dma_handle);
         kfree(entry);
     }
@@ -294,7 +295,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
 
-        pfn = page_to_pfn(virt_to_page(entry->cpu_addr + offset)); // see `dma_common_mmap`
+        pfn = page_to_pfn(virt_to_page(entry->cpu_addr)) + (offset >> PAGE_SHIFT); // see `dma_common_mmap`
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%zx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);

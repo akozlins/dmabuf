@@ -6,7 +6,7 @@ if(NOT KMODULE_KERNEL_RELEASE)
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(KMODULE_KERNEL_RELEASE STREQUAL "")
-        message(FATAL_ERROR "`uname --kernel-release`")
+        message(FATAL_ERROR "[dmabuf] empty string from `uname --kernel-release`")
     endif()
 endif()
 message(STATUS "[dmabuf] KMODULE_KERNEL_RELEASE: ${KMODULE_KERNEL_RELEASE}")

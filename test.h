@@ -11,14 +11,18 @@
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 
 #define SGR_RED "\033[0;0;31m"
 #define SGR_GREEN "\033[0;0;32m"
 #define SGR_RESET "\033[0m"
 
-#define INFO(fmt, ...) printf(SGR_GREEN "I" SGR_RESET " [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
-#define ERR(fmt, ...) printf(SGR_RED "E" SGR_RESET " [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
-#define FATAL(fmt, ...) printf(SGR_RED "F" SGR_RESET " [%s] " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define INFO(format, ...) \
+    printf(SGR_GREEN "I" SGR_RESET " [%s:%d:%s] " format, strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define ERR(format, ...) \
+    printf(SGR_RED "E" SGR_RESET " [%s:%d:%s] " format, strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define FATAL(format, ...) \
+    printf(SGR_RED "F" SGR_RESET " [%s:%d:%s] " format, strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 struct test_t {
     int fd = -1;
