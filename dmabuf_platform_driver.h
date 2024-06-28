@@ -17,6 +17,18 @@ struct dmabuf_device {
 
 static DEFINE_IDA(dmabuf_ida);
 
+static
+void dmabuf_device_free(struct dmabuf_device* dmabuf_device) {
+    if(IS_ERR_OR_NULL(dmabuf_device)) return;
+
+    if(dmabuf_device->miscdevice.minor != MISC_DYNAMIC_MINOR) misc_deregister(&dmabuf_device->miscdevice);
+
+    dmabuf_free(dmabuf_device->dmabuf);
+    if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
+    if(dmabuf_device->id >= 0) ida_free(&dmabuf_ida, dmabuf_device->id);
+    kfree(dmabuf_device);
+}
+
 /**
  * \code
  * dmabuf_device = container_of(file->private_data)
@@ -111,14 +123,7 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
     return 0;
 
 err_out:
-    if(dmabuf_device != NULL) {
-        if(dmabuf_device->miscdevice.minor != MISC_DYNAMIC_MINOR) misc_deregister(&dmabuf_device->miscdevice);
-
-        dmabuf_free(dmabuf_device->dmabuf);
-        if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
-        if(dmabuf_device->id >= 0) ida_free(&dmabuf_ida, dmabuf_device->id);
-        kfree(dmabuf_device);
-    }
+    dmabuf_device_free(dmabuf_device);
     return error;
 }
 
@@ -129,15 +134,7 @@ int dmabuf_platform_driver_remove(struct platform_device* pdev) {
 
     M_INFO("\n");
 
-    if(dmabuf_device != NULL) {
-        if(dmabuf_device->miscdevice.minor != MISC_DYNAMIC_MINOR) misc_deregister(&dmabuf_device->miscdevice);
-
-        dmabuf_free(dmabuf_device->dmabuf);
-        if(dmabuf_device->name != NULL) kfree(dmabuf_device->name);
-        if(dmabuf_device->id >= 0) ida_free(&dmabuf_ida, dmabuf_device->id);
-        kfree(dmabuf_device);
-    }
-
+    dmabuf_device_free(dmabuf_device);
     return 0;
 }
 
