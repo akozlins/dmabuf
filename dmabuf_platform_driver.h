@@ -128,20 +128,31 @@ err_out:
 }
 
 static
-int dmabuf_platform_driver_remove(struct platform_device* pdev) {
+void dmabuf_platform_driver_remove(struct platform_device* pdev) {
     struct dmabuf_device* dmabuf_device = platform_get_drvdata(pdev);
     platform_set_drvdata(pdev, NULL);
 
     M_INFO("\n");
 
     dmabuf_device_free(dmabuf_device);
+}
+
+static
+int dmabuf_platform_driver_remove_old(struct platform_device* pdev) {
+    dmabuf_platform_driver_remove(pdev);
     return 0;
 }
 
 static
 struct platform_driver dmabuf_platform_driver = {
     .probe  = dmabuf_platform_driver_probe,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
+    .remove = dmabuf_platform_driver_remove_old,
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
     .remove = dmabuf_platform_driver_remove,
+#else
+    .remove_new = dmabuf_platform_driver_remove,
+#endif
     .driver = {
         .owner = THIS_MODULE,
         .name  = THIS_MODULE->name,
