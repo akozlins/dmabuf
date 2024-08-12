@@ -54,7 +54,10 @@ int main() {
 //    cudaMallocHost(&wvalues, size);
     wvalues = test.addr;
     for(int i = 0; i < size/4; i++) wvalues[i] = i;
-//    CUDA_ASSERT(cudaHostRegister(wvalues, size, cudaHostRegisterDefault));
+    cudaError_t cudaError = cudaHostRegister(wvalues, size, cudaHostRegisterIoMemory);
+    if(cudaError != cudaSuccess) {
+        printf("W [%s] %s:%d, cudaHostRegister: cudaError = %d (%s)\n", __FUNCTION__, __FILE__, __LINE__, cudaError, cudaGetErrorString(cudaError));
+    }
 
     // allocate device memory
     uint32_t* values_d;
