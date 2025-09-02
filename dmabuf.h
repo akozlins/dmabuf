@@ -17,7 +17,10 @@
 #include <linux/dma-map-ops.h>
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) // `vm_flags_set`
+// `vm_flags_set`
+// These functions were added in kernel v6.3, but Red Hat backported to their v5.14 kernels used in the 9.6 distro releases.
+// Hence the check on the Red Hat version if it is Red Hat.
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0) && (!defined RHEL_RELEASE_CODE || (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9, 6)))
 static inline
 void vm_flags_set(struct vm_area_struct* vma, vm_flags_t flags) {
     vma->vm_flags |= flags;
