@@ -288,7 +288,13 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
     if(offset > dmabuf->size) return -EINVAL;
     if(vma_size > dmabuf->size - offset) return -EINVAL;
 
-    vm_flags_set(vma, VM_LOCKED | VM_IO | VM_DONTEXPAND);
+    vm_flags_clear(vma, VM_EXEC | VM_MAYEXEC);
+    vm_flags_set(vma, 0
+        | VM_PFNMAP // pages are managed by remap_pfn_range
+        | VM_IO // memory-mapped I/O
+        | VM_DONTEXPAND // prevent mremap
+        | VM_DONTDUMP // excludes from core dump
+    );
     M_DEBUG("vma->vm_flags = %pGv", &vma->vm_flags);
     // <https://www.kernel.org/doc/html/latest/x86/pat.html>
     // <https://elixir.bootlin.com/linux/latest/source/include/linux/dma-map-ops.h>
