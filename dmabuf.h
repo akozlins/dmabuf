@@ -335,6 +335,7 @@ ssize_t dmabuf_read(struct dmabuf* dmabuf, char __user* user_buffer, size_t user
     struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
+    if(!access_ok(user_buffer, user_size)) return -EFAULT;
 
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
         size_t size;
@@ -366,6 +367,7 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
     struct dmabuf_entry* entry;
 
     if(dmabuf == NULL) return -EFAULT;
+    if(!access_ok(user_buffer, user_size)) return -EFAULT;
 
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
         size_t size;
