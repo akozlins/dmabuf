@@ -19,7 +19,8 @@ int main() {
     // mmap and check that mmap'd DMA buffer == write buffer
     test.mmap(size, offset);
     for(int i = 0; i < size/4; i++) {
-        if(test.addr[i] == wbuffer[i]) continue;
+        auto rbuffer = static_cast<volatile uint32_t*>(test.addr);
+        if(rbuffer[i] == wbuffer[i]) continue;
         ERR("mmap_addr[0x%x] != wbuffer[0x%x]\n", i, i);
     }
 

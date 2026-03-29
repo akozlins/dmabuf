@@ -33,7 +33,7 @@ void kernel1(uint32_t* values) {
 __host__
 int main() {
     cuda_t cuda;
-    CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost));
+    //CUDA_ASSERT(cudaSetDeviceFlags(cudaDeviceMapHost));
 
     INFO("pageableMemoryAccess = %d\n", cuda.properties.pageableMemoryAccess);
     int hostRegisterSupported = 0;
@@ -42,6 +42,7 @@ int main() {
 
     test_t test;
     ssize_t size = test.seek_end(), offset = 0;
+    //size = 0x400000;
     test.mmap(size, offset);
 
     int nThreadsPerBlock = 1;
@@ -50,8 +51,8 @@ int main() {
     INFO("nThreadsPerBlock = %d, nBlocks = %d\n", nThreadsPerBlock, nBlocks);
 
     uint32_t* wvalues;
-//    wvalues = (uint32_t*)malloc(size);
-//    cudaMallocHost(&wvalues, size);
+    //wvalues = (uint32_t*)malloc(size);
+    //cudaMallocHost(&wvalues, size);
     wvalues = test.addr;
     for(int i = 0; i < size/4; i++) wvalues[i] = i;
     cudaError_t cudaError = cudaHostRegister(wvalues, size, cudaHostRegisterIoMemory);
@@ -74,7 +75,7 @@ int main() {
     // allocate host memory
     uint32_t* rvalues;
     rvalues = (uint32_t*)malloc(size);
-//    cudaMallocHost(&rvalues, size);
+    //cudaMallocHost(&rvalues, size);
 
     // copy values from device to host
     INFO("cudaMemcpy\n");

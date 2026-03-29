@@ -75,7 +75,7 @@ struct test_t {
     void read(void* buffer, size_t size) const {
         INFO("size = 0x%zx\n", size);
         ssize_t n = ::read(fd, buffer, size);
-        if(n != size) {
+        if(n != ssize_t(size)) {
             FATAL("read: n = 0x%zx\n", n);
             exit(EXIT_FAILURE);
         }
@@ -84,7 +84,7 @@ struct test_t {
     void write(const void* buffer, size_t size) const {
         INFO("size = 0x%zx\n", size);
         ssize_t n = ::write(fd, buffer, size);
-        if(n != size) {
+        if(n != ssize_t(size)) {
             FATAL("write: n = 0x%zx\n", n);
             exit(EXIT_FAILURE);
         }
