@@ -231,6 +231,9 @@ loff_t dmabuf_llseek(struct dmabuf* dmabuf, struct file* file, loff_t loff, int 
     if(dmabuf == NULL) return -EFAULT;
 
     switch(whence) {
+    case SEEK_CUR:
+        loff_new = file->f_pos + loff;
+        break;
     case SEEK_END:
         loff_new = dmabuf->size + loff;
         break;
