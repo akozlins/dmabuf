@@ -192,7 +192,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
         while(entry->cpu_addr == NULL) {
             entry->size = entry_size;
             M_DEBUG("dma_alloc_coherent(size = 0x%zx)\n", entry->size);
-            entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry->size, &entry->dma_handle, GFP_ATOMIC | __GFP_NOWARN); // see `pci_alloc_consistent`
+            entry->cpu_addr = dma_alloc_coherent(dmabuf->dev, entry->size, &entry->dma_handle, GFP_KERNEL); // see `pci_alloc_consistent`
             if(IS_ERR_OR_NULL(entry->cpu_addr)) {
                 if(entry->cpu_addr == NULL) error = -ENOMEM;
                 else error = PTR_ERR(entry->cpu_addr);
