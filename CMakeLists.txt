@@ -32,10 +32,11 @@ endif()
 
 
 add_executable(test_mmap test_mmap.cpp test.h)
+add_compile_options(-Wall -Wextra)
 
 find_package(CUDAToolkit)
 if(CUDAToolkit_FOUND)
 enable_language(CUDA)
-    set(CMAKE_CUDA_ARCHITECTURES 61)
+    set(CMAKE_CUDA_ARCHITECTURES native)
     add_executable(test_cuda test_cuda.cu test.h)
 endif()

@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef __AKOZLINS_DMABUF_H
-#define __AKOZLINS_DMABUF_H
+#pragma once
 
 #include "module.h"
 
@@ -18,8 +17,8 @@
 #endif
 
 // `vm_flags_set`
-// These functions were added in kernel v6.3, but Red Hat backported to their v5.14 kernels used in the 9.6 distro releases.
-// Hence the check on the Red Hat version if it is Red Hat.
+// these functions were added in kernel v6.3,
+// but Red Hat backported to their v5.14 kernel used in the 9.6 release
 #ifdef RHEL_RELEASE_CODE
 #   if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9, 6)
 #       define REQUIRE_VM_FLAGS_POLYFILL
@@ -159,7 +158,7 @@ void dmabuf_free(struct dmabuf* dmabuf) {
 static
 struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
     int error;
-    size_t entry_size = min(PMD_SIZE, PAGE_SIZE << 12); // start from 4096 pages (16 MB)
+    size_t entry_size = min(PMD_SIZE, PAGE_SIZE << 12); // start from min of PMD (2 MiB) and 4096 pages (16 MiB)
     struct dmabuf* dmabuf;
 
     if(dev == NULL) return ERR_PTR(-EFAULT);
@@ -391,5 +390,3 @@ ssize_t dmabuf_write(struct dmabuf* dmabuf, const char __user* user_buffer, size
 
     return n;
 }
-
-#endif // __AKOZLINS_DMABUF_H

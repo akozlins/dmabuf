@@ -5,4 +5,7 @@
 
 /cmake-build*/
 
-.cache/
+.cache
+
+*.o
+*.o.cmd

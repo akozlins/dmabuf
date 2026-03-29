@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef __AKOZLINS_DMABUF_FOPS_H
-#define __AKOZLINS_DMABUF_FOPS_H
+#pragma once
 
 #include "dmabuf.h"
 
@@ -49,5 +48,3 @@ struct file_operations dmabuf_fops = {
     .open = dmabuf_fops_open,
     .release = dmabuf_fops_release,
 };
-
-#endif // __AKOZLINS_DMABUF_FOPS_H

@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef __AKOZLINS_DMABUF_MODULE_H__
-#define __AKOZLINS_DMABUF_MODULE_H__
+#pragma once
 
 #include <linux/module.h>
 
@@ -11,5 +10,3 @@
     pr_info("[%s:%d,%s] " pr_fmt(format), strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define M_DEBUG(format, ...) \
     pr_debug("[%s:%d,%s] " pr_fmt(format), strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
-
-#endif // __AKOZLINS_DMABUF_MODULE_H__

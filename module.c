@@ -4,6 +4,7 @@
 
 MODULE_AUTHOR("akozlins");
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("");
 
 #include "dmabuf_platform_device.h"
 #include "dmabuf_platform_driver.h"

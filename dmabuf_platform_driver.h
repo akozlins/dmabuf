@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef __AKOZLINS_DMABUF_PLATFORM_DRIVER_H
-#define __AKOZLINS_DMABUF_PLATFORM_DRIVER_H
+#pragma once
 
 #include "dmabuf.h"
 
@@ -137,26 +136,26 @@ void dmabuf_platform_driver_remove(struct platform_device* pdev) {
     dmabuf_device_free(dmabuf_device);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
 static
 int dmabuf_platform_driver_remove_old(struct platform_device* pdev) {
     dmabuf_platform_driver_remove(pdev);
     return 0;
 }
+#endif
 
 static
 struct platform_driver dmabuf_platform_driver = {
     .probe  = dmabuf_platform_driver_probe,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
     .remove = dmabuf_platform_driver_remove_old,
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
-    .remove = dmabuf_platform_driver_remove,
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 13, 0)
     .remove_new = dmabuf_platform_driver_remove,
+#else
+    .remove = dmabuf_platform_driver_remove,
 #endif
     .driver = {
         .owner = THIS_MODULE,
         .name  = THIS_MODULE->name,
     },
 };
-
-#endif // __AKOZLINS_DMABUF_PLATFORM_DRIVER_H

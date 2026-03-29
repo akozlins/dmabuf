@@ -17,6 +17,7 @@ insmod : | all rmmod
 rmmod :
 	sudo rmmod $(MODULE_NAME) || true
 
+.PHONY : .cache
 .cache :
 	mkdir -p .cache
 	cp Kbuild .cache/

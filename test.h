@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef __TEST_H__
-#define __TEST_H__
+#pragma once
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -91,5 +90,3 @@ struct test_t {
         }
     }
 };
-
-#endif // __TEST_H__

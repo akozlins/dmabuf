@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef __AKOZLINS_DMABUF_CHRDEV_H__
-#define __AKOZLINS_DMABUF_CHRDEV_H__
+#pragma once
 
 #include "module.h"
 
 #include <linux/cdev.h>
 #include <linux/fs.h>
+#include <linux/kobject.h>
 #include <linux/slab.h>
 
 struct chrdev_device {
@@ -198,5 +198,3 @@ err_out:
     chrdev_free(chrdev);
     return ERR_PTR(error);
 }
-
-#endif // __AKOZLINS_DMABUF_CHRDEV_H__
