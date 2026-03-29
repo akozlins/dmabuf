@@ -33,6 +33,7 @@ int __init dmabuf_module_init(void) {
     return 0;
 
 err_out:
+    platform_driver_unregister(&dmabuf_platform_driver);
     return error;
 }
 
