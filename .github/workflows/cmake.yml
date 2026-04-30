@@ -10,10 +10,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Configure CMake
+    - name: build kernel driver
       shell: bash
-      run: cmake -S $GITHUB_WORKSPACE -B ${{runner.workspace}}/build
+      run: make -C "${{runner.workspace}}"
 
-    - name: Build
+    - name: cmake configure
       shell: bash
-      run: cmake --build ${{runner.workspace}}/build
+      run: cmake -S $GITHUB_WORKSPACE -B "${{runner.workspace}}/build"
+
+    - name: cmake build
+      shell: bash
+      run: cmake --build "${{runner.workspace}}/build"

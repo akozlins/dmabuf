@@ -12,13 +12,16 @@ file(GLOB MODULE_SOURCES
 # `uname --kernel-release`
 #set(KMODULE_KERNEL_RELEASE ...)
 
-list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-find_package(kmodule REQUIRED)
-add_kmodule(${PROJECT_NAME}
-    NAME ${MODULE_NAME}
-    ${MODULE_SOURCES}
-)
-add_dependencies(${PROJECT_NAME}-insmod ${PROJECT_NAME}-rmmod)
+option(DMABUF_KERNEL_MODULE "Build dmabuf kerner module" OFF)
+if(DMABUF_KERNEL_MODULE)
+    list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+    find_package(kmodule REQUIRED)
+    add_kmodule(${PROJECT_NAME}
+        NAME ${MODULE_NAME}
+        ${MODULE_SOURCES}
+    )
+    add_dependencies(${PROJECT_NAME}-insmod ${PROJECT_NAME}-rmmod)
+endif()
 
 get_directory_property(parent_dir PARENT_DIRECTORY)
 if(NOT parent_dir)
