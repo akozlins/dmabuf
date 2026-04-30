@@ -306,6 +306,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
 
     // the mm semaphore is already held (by mmap)
     list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        phys_addr_t phys;
         unsigned long pfn;
         size_t size;
         if(offset >= entry->size) {
@@ -316,7 +317,8 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         if(vma_size < size) size = vma_size;
         if(size == 0) break;
 
-        pfn = page_to_pfn(virt_to_page(entry->cpu_addr)) + (offset >> PAGE_SHIFT); // see `dma_common_mmap`
+        phys = dma_to_phys(dmabuf->dev, entry->dma_handle) + offset;
+        pfn = PHYS_PFN(phys);
 
         M_DEBUG("remap_pfn_range(pfn = 0x%lx, size = 0x%zx)\n", pfn, size);
         error = remap_pfn_range(vma, vma_addr, pfn, size, vma->vm_page_prot);
