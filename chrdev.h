@@ -118,7 +118,8 @@ struct chrdev_device* chrdev_device_add(struct chrdev* chrdev, int minor, const 
 
     chrdev_device->device = device_create(chrdev->class, parent, chrdev_device->cdev.dev, NULL, "%s%d", chrdev->name, minor);
     if(IS_ERR_OR_NULL(chrdev_device->device)) {
-        error = PTR_ERR(chrdev_device->device);
+        if(chrdev_device->device == NULL) error = -ENOMEM;
+        else error = PTR_ERR(chrdev_device->device);
         chrdev_device->device = NULL;
         M_ERR("device_create(minor = %d): error = %d\n", minor, error);
         goto err_out;
@@ -159,8 +160,8 @@ struct chrdev* chrdev_alloc(const char* name, int count) {
 
     chrdev = kzalloc(sizeof(*chrdev) + count * sizeof(chrdev->devices[0]), GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev)) {
-        error = PTR_ERR(chrdev);
-        if(error == 0) error = -ENOMEM;
+        if(chrdev == NULL) error = -ENOMEM;
+        else error = PTR_ERR(chrdev);
         chrdev = NULL;
         M_ERR("kzalloc: error = %d\n", error);
         goto err_out;
@@ -168,8 +169,8 @@ struct chrdev* chrdev_alloc(const char* name, int count) {
 
     chrdev->name = kstrdup(name, GFP_KERNEL);
     if(IS_ERR_OR_NULL(chrdev->name)) {
-        error = PTR_ERR(chrdev->name);
-        if(error == 0) error = -ENOMEM;
+        if(chrdev->name == NULL) error = -ENOMEM;
+        else error = PTR_ERR(chrdev->name);
         chrdev->name = NULL;
         M_ERR("kstrdup: error = %d\n", error);
         goto err_out;
@@ -178,7 +179,8 @@ struct chrdev* chrdev_alloc(const char* name, int count) {
     // create /sys/class/${name}
     chrdev->class = class_create(THIS_MODULE, chrdev->name);
     if(IS_ERR_OR_NULL(chrdev->class)) {
-        error = PTR_ERR(chrdev->class);
+        if(chrdev->class == NULL) error = -ENOMEM;
+        else error = PTR_ERR(chrdev->class);
         chrdev->class = NULL;
         M_ERR("class_create(name = '%s'): error = %d\n", name, error);
         goto err_out;

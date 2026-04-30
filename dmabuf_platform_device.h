@@ -14,7 +14,8 @@ struct platform_device* dmabuf_platform_device_register(const char* name) {
 
     pdev = platform_device_alloc(name, -1);
     if(IS_ERR_OR_NULL(pdev)) {
-        error = PTR_ERR(pdev);
+        if(pdev == NULL) error = -ENOMEM;
+        else error = PTR_ERR(pdev);
         pdev = NULL;
         M_ERR("platform_device_alloc: error = %d\n", error);
         goto err_out;

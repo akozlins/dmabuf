@@ -5,6 +5,8 @@
 #include <memory>
 
 int main() {
+    int exit_status = EXIT_SUCCESS;
+
     test_t test;
     size_t size = test.seek_end(), offset = 0;
 
@@ -22,6 +24,7 @@ int main() {
         auto rbuffer = static_cast<volatile uint32_t*>(test.addr);
         if(rbuffer[i] == wbuffer[i]) continue;
         ERR("mmap_addr[0x%x] != wbuffer[0x%x]\n", i, i);
+        exit_status = EXIT_FAILURE;
     }
 
     // init read buffer
@@ -36,10 +39,11 @@ int main() {
     for(int i = 0; i < size/4; i++) {
         if(rbuffer[i] == wbuffer[i]) continue;
         ERR("rbuffer[0x%x] != wbuffer[0x%x]\n", i, i);
+        exit_status = EXIT_FAILURE;
     }
 
     // cleanup
     munmap(test.addr, size);
 
-    return 0;
+    return exit_status;
 }

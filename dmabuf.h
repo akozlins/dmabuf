@@ -93,6 +93,7 @@ static
 int dmabuf_report(struct dmabuf* dmabuf) {
     int n = 0;
     struct dmabuf_entry* entry;
+    int nEntries = 0;
 
     if(IS_ERR_OR_NULL(dmabuf)) return -EFAULT;
 
@@ -107,8 +108,13 @@ int dmabuf_report(struct dmabuf* dmabuf) {
             entry = next;
         }
         n++;
-        M_INFO("dma_handle = %pad, size = 0x%zx", &dma_handle, size);
+        M_INFO("dma_handle = %pad, size = 0x%zx\n", &dma_handle, size);
     }
+
+    list_for_each_entry(entry, &dmabuf->entries, list_head) {
+        nEntries += 1;
+    }
+    M_INFO("-> %d dma_handle entries\n", nEntries);
 
     return n;
 }
@@ -171,8 +177,9 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
 
     dmabuf = kzalloc(sizeof(*dmabuf), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf)) {
-        error = PTR_ERR(dmabuf);
-        if(error == 0) error = -ENOMEM;
+        if(dmabuf == NULL) error = -ENOMEM;
+        else error = PTR_ERR(dmabuf);
+        dmabuf = NULL;
         M_ERR("kzalloc: error = %d\n", error);
         goto err_out;
     }
@@ -185,6 +192,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
         if(IS_ERR_OR_NULL(entry)) {
             if(entry == NULL) error = -ENOMEM;
             else error = PTR_ERR(entry);
+            entry = NULL;
             M_ERR("kzalloc: error = %d\n", error);
             goto err_out;
         }
@@ -196,6 +204,7 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
             if(IS_ERR_OR_NULL(entry->cpu_addr)) {
                 if(entry->cpu_addr == NULL) error = -ENOMEM;
                 else error = PTR_ERR(entry->cpu_addr);
+                entry->cpu_addr = NULL;
                 M_ERR("dma_alloc_coherent(size = 0x%zx): error = %d\n", entry->size, error);
                 if(entry_size <= PAGE_SIZE) {
                     kfree(entry);
@@ -203,7 +212,6 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
                 }
                 // reduce allocation order and try again
                 entry_size /= 2;
-                entry->cpu_addr = NULL;
             }
         }
 
@@ -212,6 +220,8 @@ struct dmabuf* dmabuf_alloc(struct device* dev, size_t size) {
 
         dmabuf->size += entry->size;
     }
+    // TODO: don't expose memory above requested size
+    //dmabuf->size = size;
 
     // sort by dma_handle
     list_sort(NULL, &dmabuf->entries, dmabuf_entry_cmp);
@@ -295,7 +305,7 @@ int dmabuf_mmap(struct dmabuf* dmabuf, struct vm_area_struct* vma) {
         | VM_DONTEXPAND // prevent mremap
         | VM_DONTDUMP // excludes from core dump
     );
-    M_DEBUG("vma->vm_flags = %pGv", &vma->vm_flags);
+    M_DEBUG("vma->vm_flags = %pGv\n", &vma->vm_flags);
     // <https://www.kernel.org/doc/html/latest/x86/pat.html>
     // <https://elixir.bootlin.com/linux/latest/source/include/linux/dma-map-ops.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) // `dma-map-ops.h`

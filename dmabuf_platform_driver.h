@@ -75,12 +75,13 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 
     dmabuf_device = kzalloc(sizeof(*dmabuf_device), GFP_KERNEL);
     if(IS_ERR_OR_NULL(dmabuf_device)) {
-        error = PTR_ERR(dmabuf_device);
-        if(error == 0) error = -ENOMEM;
+        if(dmabuf_device == NULL) error = -ENOMEM;
+        else error = PTR_ERR(dmabuf_device);
         dmabuf_device = NULL;
         M_ERR("kzalloc(): error = %d\n", error);
         goto err_out;
     }
+    dmabuf_device->miscdevice.minor = MISC_DYNAMIC_MINOR; // mark not registered
 
     dmabuf_device->id = ida_alloc(&dmabuf_ida, GFP_KERNEL);
     if(dmabuf_device->id < 0) {
@@ -91,8 +92,8 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 
     dmabuf_device->name = kasprintf(GFP_KERNEL, "%s%d", THIS_MODULE->name, dmabuf_device->id);
     if(IS_ERR_OR_NULL(dmabuf_device->name)) {
-        error = PTR_ERR(dmabuf_device->name);
-        if(error == 0) error = -ENOMEM;
+        if(dmabuf_device->name == NULL) error = -ENOMEM;
+        else error = PTR_ERR(dmabuf_device->name);
         dmabuf_device->name = NULL;
         M_ERR("kasprintf(): error = %d\n", error);
         goto err_out;
@@ -100,12 +101,13 @@ int dmabuf_platform_driver_probe(struct platform_device* pdev) {
 
     dmabuf_device->dmabuf = dmabuf_alloc(&pdev->dev, 1024 * 1024 * 1024);
     if(IS_ERR_OR_NULL(dmabuf_device->dmabuf)) {
-        error = PTR_ERR(dmabuf_device->dmabuf);
+        if(dmabuf_device->dmabuf == NULL) error = -ENOMEM;
+        else error = PTR_ERR(dmabuf_device->dmabuf);
+        dmabuf_device->dmabuf = NULL;
         M_ERR("dmabuf_alloc(): error = %d\n", error);
         goto err_out;
     }
 
-    dmabuf_device->miscdevice.minor = MISC_DYNAMIC_MINOR;
     dmabuf_device->miscdevice.name = dmabuf_device->name;
     dmabuf_device->miscdevice.fops = &dmabuf_fops;
     dmabuf_device->miscdevice.parent = &pdev->dev;
@@ -147,12 +149,12 @@ int dmabuf_platform_driver_remove_old(struct platform_device* pdev) {
 static
 struct platform_driver dmabuf_platform_driver = {
     .probe  = dmabuf_platform_driver_probe,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
-    .remove = dmabuf_platform_driver_remove_old,
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 13, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+    .remove = dmabuf_platform_driver_remove,
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
     .remove_new = dmabuf_platform_driver_remove,
 #else
-    .remove = dmabuf_platform_driver_remove,
+    .remove = dmabuf_platform_driver_remove_old,
 #endif
     .driver = {
         .owner = THIS_MODULE,

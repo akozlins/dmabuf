@@ -1,16 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 #pragma once
 
-#include <fcntl.h>
-#include <unistd.h>
-
-#include <sys/mman.h>
-
 #include <cerrno>
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #define SGR_RED "\033[0;0;31m"
 #define SGR_GREEN "\033[0;0;32m"

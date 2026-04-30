@@ -25,7 +25,8 @@ int __init dmabuf_module_init(void) {
 
     dmabuf_platform_device = dmabuf_platform_device_register(THIS_MODULE->name);
     if(IS_ERR_OR_NULL(dmabuf_platform_device)) {
-        error = PTR_ERR(dmabuf_platform_device);
+        if(dmabuf_platform_device == NULL) error = -ENOMEM;
+        else error = PTR_ERR(dmabuf_platform_device);
         dmabuf_platform_device = NULL;
         goto err_out;
     }

@@ -13,6 +13,7 @@ static
 ssize_t dmabuf_fops_read(struct file* file, char __user* user_buffer, size_t size, loff_t* offset) {
     struct dmabuf* dmabuf = file->private_data;
     ssize_t n = dmabuf_read(dmabuf, user_buffer, size, *offset);
+    if(n < 0) return n;
     *offset += n;
     return n;
 }
@@ -21,6 +22,7 @@ static
 ssize_t dmabuf_fops_write(struct file* file, const char __user* user_buffer, size_t size, loff_t* offset) {
     struct dmabuf* dmabuf = file->private_data;
     ssize_t n = dmabuf_write(dmabuf, user_buffer, size, *offset);
+    if(n < 0) return n;
     *offset += n;
     return n;
 }
